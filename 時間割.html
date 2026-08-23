@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>時間割</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@500;700&display=swap" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: #FAF7EF;
+    color: #2E2C27;
+    padding: 32px 20px 60px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  h1 {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.02em;
+    color: #24344D;
+  }
+  header p { margin: 4px 0 0; font-size: 13px; color: #8A8676; }
+  #addBtn {
+    background: #24344D;
+    color: #FAF7EF;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #addBtn:hover { filter: brightness(1.1); }
+  #addBtn:active { transform: scale(0.98); }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  #shareBtn {
+    background: none;
+    color: #24344D;
+    border: 1px solid #24344D;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #shareBtn:hover { background: #EFEADD; }
+  #shareBtn:active { transform: scale(0.98); }
+
+  .scroll-hint {
+    display: none;
+    font-size: 12px;
+    color: #8A8676;
+    margin-bottom: 8px;
+  }
+  .grid-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #saveError {
+    display: none;
+    background: #FBEAEA;
+    color: #8C2E2E;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+
+  .grid {
+    border: 1px solid #24344D;
+    border-radius: 4px;
+    background: #fff;
+    display: grid;
+    grid-template-columns: 88px repeat(5, minmax(96px, 1fr));
+    min-width: 640px;
+  }
+  .corner {
+    background: #EFEADD;
+    border-bottom: 1px solid #24344D;
+    border-right: 1px solid #24344D;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+  .day-head {
+    background: #EFEADD;
+    border-bottom: 1px solid #24344D;
+    border-right: 1px solid #d8d3c4;
+    text-align: center;
+    padding: 10px 4px;
+    font-family: 'Shippori Mincho', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: #24344D;
+  }
+  .day-head:last-child, .cell:nth-child(7n) { border-right: 1px solid #24344D; }
+  .period-cell {
+    border-bottom: 1px solid #d8d3c4;
+    border-right: 1px solid #24344D;
+    padding: 10px 8px;
+    font-size: 12px;
+    color: #5C594E;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #F5F1E6;
+  }
+  .period-cell .p-label { font-weight: 700; font-size: 13px; color: #24344D; }
+  .period-cell .p-time { margin-top: 2px; white-space: nowrap; font-size: 11px; }
+  .row-even { background: #F5F1E6; }
+  .row-odd { background: #EDE8DA; }
+
+  .cell {
+    border-bottom: 1px solid #d8d3c4;
+    border-right: 1px solid #d8d3c4;
+    min-height: 62px;
+    background: #fff;
+    cursor: pointer;
+    padding: 8px 8px;
+    transition: filter 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cell:hover { filter: brightness(0.97); }
+  .cell:active { filter: brightness(0.93); }
+  .cell .c-name { font-size: 13px; font-weight: 700; line-height: 1.3; word-break: break-word; }
+  .cell .c-room { font-size: 12px; margin-top: 3px; opacity: 0.85; word-break: break-word; }
+
+  .loading { padding: 40px; text-align: center; color: #8A8676; }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30,28,22,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #FAF7EF;
+    border-radius: 8px;
+    padding: 24px;
+    width: 360px;
+    max-width: 100%;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+  }
+  .modal h2 {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 18px;
+    margin: 0 0 16px;
+    color: #24344D;
+  }
+  .row2 { display: flex; gap: 8px; margin-bottom: 12px; }
+  .slots-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .slots-head span { font-size: 12px; color: #5C594E; }
+  .slots-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .slot-row { display: flex; gap: 6px; align-items: center; }
+  .slot-row select {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 6px;
+    border-radius: 6px;
+    border: 1px solid #cfc9b8;
+    font-family: inherit;
+    font-size: 14px;
+    background: #fff;
+  }
+  .removeSlotBtn {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #cfc9b8;
+    background: #fff;
+    color: #8A8676;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    font-family: inherit;
+  }
+  .removeSlotBtn:hover { background: #F5F1E6; color: #B23A3A; border-color: #C97B7B; }
+  .btn-link {
+    background: none;
+    border: none;
+    color: #24344D;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 2px 0;
+  }
+  .btn-link:hover { text-decoration: underline; }
+  .field { flex: 1; font-size: 12px; color: #5C594E; display: block; margin-bottom: 12px; }
+  .field select, .field input {
+    width: 100%;
+    margin-top: 4px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    border: 1px solid #cfc9b8;
+    font-family: inherit;
+    font-size: 14px;
+    box-sizing: border-box;
+    background: #fff;
+  }
+  .form-error { color: #B23A3A; font-size: 12px; margin-top: 4px; }
+  .color-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .swatch {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid #cfc9b8; cursor: pointer;
+  }
+  .swatch.selected { border: 2px solid #24344D; }
+  .modal-actions {
+    display: flex; gap: 8px; justify-content: space-between; margin-top: 8px;
+  }
+  .btn {
+    border-radius: 6px; padding: 9px 14px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .btn-ghost { background: none; border: 1px solid #cfc9b8; color: #5C594E; }
+  .btn-danger { background: none; border: 1px solid #C97B7B; color: #B23A3A; }
+  .btn-primary { background: #24344D; border: none; color: #FAF7EF; font-weight: 500; padding: 9px 16px; }
+
+  .tab-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tab-btn {
+    flex: 1;
+    padding: 9px 6px;
+    border-radius: 6px;
+    border: 1px solid #cfc9b8;
+    background: #fff;
+    color: #5C594E;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tab-btn.active { background: #24344D; color: #FAF7EF; border-color: #24344D; }
+  .share-panel { display: none; }
+  .share-panel.active { display: block; }
+  .share-desc { font-size: 12px; color: #8A8676; margin: 0 0 14px; line-height: 1.6; }
+  .code-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .code-box input {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    letter-spacing: 0.03em;
+    padding: 9px 10px;
+    border-radius: 6px;
+    border: 1px solid #cfc9b8;
+    background: #fff;
+    color: #24344D;
+  }
+  .share-status {
+    font-size: 12px;
+    color: #5C594E;
+    min-height: 16px;
+    margin: 8px 0 4px;
+  }
+  .share-status.err { color: #B23A3A; }
+  .share-status.ok { color: #3B6D11; }
+  .import-summary {
+    background: #EFEADD;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #2E2C27;
+  }
+  .import-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .import-actions .btn { width: 100%; }
+
+  @media (max-width: 640px) {
+    body { padding: 20px 14px 48px; }
+    header { margin-bottom: 16px; }
+    h1 { font-size: 24px; }
+    header p { font-size: 12px; }
+    #addBtn { padding: 10px 14px; font-size: 13px; }
+    .scroll-hint { display: block; text-align: center; }
+    .modal { width: 100%; padding: 20px; }
+    .row2 { gap: 6px; }
+    .slot-row select { padding: 10px; font-size: 16px; }
+    .removeSlotBtn { width: 34px; height: 34px; font-size: 16px; }
+    .field select, .field input { padding: 10px; font-size: 16px; }
+    .swatch { width: 32px; height: 32px; }
+  }
+
+  @media (max-width: 380px) {
+    h1 { font-size: 21px; }
+    .grid { grid-template-columns: 74px repeat(5, minmax(84px, 1fr)); min-width: 560px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>時間割</h1>
+    </div>
+    <div class="header-actions">
+      <button id="shareBtn">共有</button>
+      <button id="addBtn">＋ 講義を登録</button>
+    </div>
+  </header>
+
+  <div id="saveError">保存に失敗しました。もう一度お試しください。</div>
+
+  <div id="loading" class="loading">読み込み中…</div>
+  <p class="scroll-hint" id="scrollHint">← 横にスクロールできます →</p>
+  <div class="grid-scroll">
+    <div id="grid" class="grid" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="overlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="modalTitle">講義を登録</h2>
+    <div class="field">
+      <div class="slots-head">
+        <span>曜日・時限</span>
+        <button type="button" class="btn-link" id="addSlotBtn">＋ コマを追加</button>
+      </div>
+      <div class="slots-list" id="slotsList"></div>
+    </div>
+    <label class="field">講義名
+      <input type="text" id="fName" placeholder="線形空間論" />
+      <div class="form-error" id="fNameError" style="display:none;"></div>
+    </label>
+    <label class="field">教室 / 場所
+      <input type="text" id="fRoom" placeholder="37-705 / オンデマンド" />
+    </label>
+    <div class="field">
+      色
+      <div class="color-row" id="colorRow"></div>
+    </div>
+    <div class="modal-actions">
+      <div><button class="btn btn-danger" id="deleteBtn" style="display:none;">削除</button></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="cancelBtn">キャンセル</button>
+        <button class="btn btn-primary" id="saveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shareOverlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>時間割を共有</h2>
+    <div class="tab-row">
+      <button type="button" class="tab-btn active" id="tabSend">送る</button>
+      <button type="button" class="tab-btn" id="tabReceive">受け取る</button>
+    </div>
+
+    <div class="share-panel active" id="sendPanel">
+      <p class="share-desc">コードを発行して相手に伝えてください。相手がそのコードで接続すると、今の時間割が1回だけ送信されます。コードは5桁の数字で、発行から10分間有効です。</p>
+      <button class="btn btn-primary" id="genCodeBtn" style="width:100%;">コードを発行する</button>
+      <div class="code-box" id="codeBox" style="display:none;">
+        <input type="text" id="codeOutput" readonly />
+        <button class="btn btn-ghost" id="copyCodeBtn" type="button">コピー</button>
+      </div>
+      <p class="share-status" id="codeTimer"></p>
+      <p class="share-status" id="sendStatus"></p>
+    </div>
+
+    <div class="share-panel" id="receivePanel">
+      <p class="share-desc">相手から伝えられた5桁のコードを入力して接続してください(発行から10分を過ぎると無効になります)。</p>
+      <div class="code-box">
+        <input type="text" id="receiveCodeInput" placeholder="12345" inputmode="numeric" pattern="[0-9]*" maxlength="5" />
+        <button class="btn btn-primary" id="connectBtn" type="button">接続</button>
+      </div>
+      <p class="share-status" id="receiveStatus"></p>
+      <div class="import-summary" id="importSummary" style="display:none;"></div>
+      <div class="import-actions" id="importActions" style="display:none;">
+        <button class="btn btn-primary" id="importMergeBtn">既存に追加する(重複するコマは上書き)</button>
+        <button class="btn btn-ghost" id="importReplaceBtn">今の時間割をすべて置き換える</button>
+        <button class="btn btn-ghost" id="importDiscardBtn">取り込まない</button>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:flex-end; margin-top:16px;">
+      <button class="btn btn-ghost" id="shareCloseBtn">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = ["月", "火", "水", "木", "金"];
+const PERIODS = [
+  { id: 1, label: "1限", time: "9:00〜10:40" },
+  { id: 2, label: "2限", time: "10:55〜12:35" },
+  { id: 3, label: "3限", time: "13:25〜15:05" },
+  { id: 4, label: "4限", time: "15:20〜17:00" },
+  { id: 5, label: "5限", time: "17:15〜18:55" },
+  { id: 6, label: "6限", time: "19:05〜20:45" },
+];
+const PALETTE = [
+  { name: "そら", bg: "#AFD9F5", text: "#0D3A5C" },
+  { name: "瑠璃", bg: "#A9BEF2", text: "#1E2F73" },
+  { name: "若葉", bg: "#BEE3A8", text: "#28480F" },
+  { name: "抹茶", bg: "#D6DE9C", text: "#4A5219" },
+  { name: "菜の花", bg: "#F3E48F", text: "#5C4A05" },
+  { name: "杏", bg: "#F6C99A", text: "#6B3510" },
+  { name: "朱", bg: "#F3B49C", text: "#7A2E10" },
+  { name: "桜", bg: "#F3C6E2", text: "#6B2148" },
+  { name: "撫子", bg: "#EFB6B8", text: "#7A2020" },
+  { name: "藤", bg: "#D6C6F0", text: "#3E2967" },
+  { name: "檜皮", bg: "#DCC0A0", text: "#5A3B1D" },
+  { name: "鼠", bg: "#D9D6CC", text: "#3A3934" },
+];
+const STORAGE_KEY = "timetable:courses";
+
+let courses = [];
+let currentForm = null; // {id, name, room, colorIdx, slots: [{day, period}, ...]}
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+// --- storage layer: uses window.storage if available (Claude artifact),
+// otherwise falls back to localStorage for standalone use in a browser ---
+async function loadCourses() {
+  try {
+    if (window.storage) {
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if (res && res.value) return JSON.parse(res.value);
+      return [];
+    }
+  } catch (e) {
+    // key not found or storage unavailable, fall through
+  }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function saveCourses(next) {
+  courses = next;
+  try {
+    if (window.storage) {
+      const res = await window.storage.set(STORAGE_KEY, JSON.stringify(next), false);
+      if (!res) throw new Error("save failed");
+      hideSaveError();
+      return;
+    }
+  } catch (e) {
+    // fall through to localStorage
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    hideSaveError();
+  } catch (e) {
+    showSaveError();
+  }
+}
+
+function showSaveError() { document.getElementById('saveError').style.display = 'block'; }
+function hideSaveError() { document.getElementById('saveError').style.display = 'none'; }
+
+function findCourse(day, periodId) {
+  return courses.find(c => c.day === day && c.period === periodId);
+}
+
+// --- render grid ---
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  const corner = document.createElement('div');
+  corner.className = 'corner';
+  grid.appendChild(corner);
+
+  DAYS.forEach(d => {
+    const head = document.createElement('div');
+    head.className = 'day-head';
+    head.textContent = d;
+    grid.appendChild(head);
+  });
+
+  PERIODS.forEach((p, rowIdx) => {
+    const pc = document.createElement('div');
+    pc.className = 'period-cell ' + (rowIdx % 2 === 0 ? 'row-even' : 'row-odd');
+    pc.innerHTML = `<div class="p-label">${p.label}</div><div class="p-time">${p.time}</div>`;
+    grid.appendChild(pc);
+
+    DAYS.forEach(d => {
+      const course = findCourse(d, p.id);
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      if (course) {
+        const palette = PALETTE[course.colorIdx];
+        cell.style.background = palette.bg;
+        cell.innerHTML = `<div class="c-name" style="color:${palette.text}">${escapeHtml(course.name)}</div>` +
+          (course.room ? `<div class="c-room" style="color:${palette.text}">${escapeHtml(course.room)}</div>` : '');
+        cell.addEventListener('click', () => openEditForm(course));
+      } else {
+        cell.addEventListener('click', () => openNewForm(d, p.id));
+      }
+      grid.appendChild(cell);
+    });
+  });
+
+  grid.style.display = 'grid';
+  document.getElementById('loading').style.display = 'none';
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// --- modal form: slots (day/period pairs) ---
+function renderSlotsUI() {
+  const list = document.getElementById('slotsList');
+  list.innerHTML = '';
+  const isNew = currentForm.id === null;
+
+  currentForm.slots.forEach((slot, idx) => {
+    const row = document.createElement('div');
+    row.className = 'slot-row';
+
+    const daySel = document.createElement('select');
+    daySel.innerHTML = DAYS.map(d => `<option value="${d}"${d === slot.day ? ' selected' : ''}>${d}</option>`).join('');
+    daySel.addEventListener('change', (e) => {
+      currentForm.slots[idx].day = e.target.value;
+    });
+    row.appendChild(daySel);
+
+    const periodSel = document.createElement('select');
+    periodSel.innerHTML = PERIODS.map(p => `<option value="${p.id}"${p.id === slot.period ? ' selected' : ''}>${p.label}</option>`).join('');
+    periodSel.addEventListener('change', (e) => {
+      currentForm.slots[idx].period = Number(e.target.value);
+    });
+    row.appendChild(periodSel);
+
+    if (isNew && currentForm.slots.length > 1) {
+      const rmBtn = document.createElement('button');
+      rmBtn.type = 'button';
+      rmBtn.className = 'removeSlotBtn';
+      rmBtn.textContent = '×';
+      rmBtn.setAttribute('aria-label', 'このコマを削除');
+      rmBtn.addEventListener('click', () => {
+        currentForm.slots.splice(idx, 1);
+        renderSlotsUI();
+      });
+      row.appendChild(rmBtn);
+    }
+
+    list.appendChild(row);
+  });
+
+  document.getElementById('addSlotBtn').style.display = isNew ? 'inline-block' : 'none';
+}
+
+function addSlot() {
+  const used = new Set(currentForm.slots.map(s => s.day + '_' + s.period));
+  let next = null;
+  outer:
+  for (const d of DAYS) {
+    for (const p of PERIODS) {
+      if (!used.has(d + '_' + p.id)) {
+        next = { day: d, period: p.id };
+        break outer;
+      }
+    }
+  }
+  currentForm.slots.push(next || { day: DAYS[0], period: PERIODS[0].id });
+  renderSlotsUI();
+}
+
+function renderColorRow() {
+  const row = document.getElementById('colorRow');
+  row.innerHTML = '';
+  PALETTE.forEach((c, idx) => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (currentForm.colorIdx === idx ? ' selected' : '');
+    sw.style.background = c.bg;
+    sw.title = c.name;
+    sw.addEventListener('click', () => {
+      currentForm.colorIdx = idx;
+      renderColorRow();
+    });
+    row.appendChild(sw);
+  });
+}
+
+function openNewForm(day, periodId) {
+  currentForm = {
+    id: null,
+    name: '',
+    room: '',
+    colorIdx: 0,
+    slots: [{ day: day || DAYS[0], period: periodId || PERIODS[0].id }],
+  };
+  fillFormUI();
+  document.getElementById('modalTitle').textContent = '講義を登録';
+  document.getElementById('deleteBtn').style.display = 'none';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function openEditForm(course) {
+  currentForm = {
+    id: course.id,
+    name: course.name,
+    room: course.room,
+    colorIdx: course.colorIdx,
+    slots: [{ day: course.day, period: course.period }],
+  };
+  fillFormUI();
+  document.getElementById('modalTitle').textContent = '講義を編集';
+  document.getElementById('deleteBtn').style.display = 'inline-block';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function fillFormUI() {
+  document.getElementById('fName').value = currentForm.name;
+  document.getElementById('fRoom').value = currentForm.room;
+  document.getElementById('fNameError').style.display = 'none';
+  renderSlotsUI();
+  renderColorRow();
+}
+
+function closeForm() {
+  document.getElementById('overlay').classList.remove('open');
+  currentForm = null;
+}
+
+async function submitForm() {
+  currentForm.name = document.getElementById('fName').value.trim();
+  currentForm.room = document.getElementById('fRoom').value.trim();
+
+  if (!currentForm.name) {
+    const err = document.getElementById('fNameError');
+    err.textContent = '講義名を入力してください';
+    err.style.display = 'block';
+    return;
+  }
+
+  // dedupe slots by day+period, keeping the last selection for each
+  const dedup = new Map();
+  currentForm.slots.forEach(s => dedup.set(s.day + '_' + s.period, s));
+  const slots = Array.from(dedup.values());
+
+  // remove the course being edited (if any) and any existing course
+  // occupying a slot we're about to (re)write, then insert fresh entries
+  let working = courses.filter(c => c.id !== currentForm.id);
+  slots.forEach(s => {
+    working = working.filter(c => !(c.day === s.day && c.period === s.period));
+  });
+
+  const newCourses = slots.map((s, idx) => ({
+    id: (currentForm.id && idx === 0) ? currentForm.id : uid(),
+    day: s.day,
+    period: s.period,
+    name: currentForm.name,
+    room: currentForm.room,
+    colorIdx: currentForm.colorIdx,
+  }));
+
+  const next = [...working, ...newCourses];
+  await saveCourses(next);
+  renderGrid();
+  closeForm();
+}
+
+async function deleteCourse() {
+  if (!currentForm || !currentForm.id) return;
+  const next = courses.filter(c => c.id !== currentForm.id);
+  await saveCourses(next);
+  renderGrid();
+  closeForm();
+}
+
+// --- share via P2P (PeerJS), one-time transfer ---
+let sharePeer = null;
+let shareConn = null;
+let pendingImport = null;
+let shareCountdownInterval = null;
+let shareExpireAt = null;
+
+const SHARE_CODE_TTL_MS = 10 * 60 * 1000;
+
+function setSendStatus(msg, tone) {
+  const el = document.getElementById('sendStatus');
+  el.textContent = msg || '';
+  el.className = 'share-status' + (tone ? ' ' + tone : '');
+}
+
+function setReceiveStatus(msg, tone) {
+  const el = document.getElementById('receiveStatus');
+  el.textContent = msg || '';
+  el.className = 'share-status' + (tone ? ' ' + tone : '');
+}
+
+function cleanupShare() {
+  if (shareCountdownInterval) {
+    clearInterval(shareCountdownInterval);
+    shareCountdownInterval = null;
+  }
+  shareExpireAt = null;
+  if (shareConn) {
+    try { shareConn.close(); } catch (e) {}
+    shareConn = null;
+  }
+  if (sharePeer) {
+    try { sharePeer.destroy(); } catch (e) {}
+    sharePeer = null;
+  }
+}
+
+function resetShareUI() {
+  document.getElementById('codeBox').style.display = 'none';
+  document.getElementById('codeOutput').value = '';
+  document.getElementById('genCodeBtn').style.display = 'block';
+  document.getElementById('genCodeBtn').disabled = false;
+  document.getElementById('codeTimer').textContent = '';
+  setSendStatus('');
+
+  document.getElementById('receiveCodeInput').value = '';
+  document.getElementById('importSummary').style.display = 'none';
+  document.getElementById('importActions').style.display = 'none';
+  setReceiveStatus('');
+  pendingImport = null;
+}
+
+function openShareModal() {
+  cleanupShare();
+  resetShareUI();
+  switchShareTab('send');
+  document.getElementById('shareOverlay').classList.add('open');
+}
+
+function closeShareModal() {
+  cleanupShare();
+  document.getElementById('shareOverlay').classList.remove('open');
+}
+
+function switchShareTab(tab) {
+  const isSend = tab === 'send';
+  document.getElementById('tabSend').classList.toggle('active', isSend);
+  document.getElementById('tabReceive').classList.toggle('active', !isSend);
+  document.getElementById('sendPanel').classList.toggle('active', isSend);
+  document.getElementById('receivePanel').classList.toggle('active', !isSend);
+}
+
+function makeFiveDigitCode() {
+  return String(Math.floor(10000 + Math.random() * 90000));
+}
+
+function startShareCountdown() {
+  shareExpireAt = Date.now() + SHARE_CODE_TTL_MS;
+  updateCountdownDisplay();
+  shareCountdownInterval = setInterval(updateCountdownDisplay, 1000);
+}
+
+function updateCountdownDisplay() {
+  const remain = shareExpireAt - Date.now();
+  if (remain <= 0) {
+    cleanupShare();
+    resetShareUI();
+    setSendStatus('コードの有効期限が切れました。再発行してください。', 'err');
+    return;
+  }
+  const totalSec = Math.ceil(remain / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  document.getElementById('codeTimer').textContent =
+    `有効期限まで ${m}:${String(s).padStart(2, '0')}`;
+}
+
+function generateShareCode() {
+  if (typeof Peer === 'undefined') {
+    setSendStatus('通信ライブラリの読み込みに失敗しました。通信環境を確認してください。', 'err');
+    return;
+  }
+  document.getElementById('genCodeBtn').disabled = true;
+  setSendStatus('コードを発行しています…');
+  tryCreateSharePeer(5);
+}
+
+function tryCreateSharePeer(retriesLeft) {
+  const code = makeFiveDigitCode();
+  sharePeer = new Peer(code);
+
+  sharePeer.on('open', (id) => {
+    document.getElementById('codeOutput').value = id;
+    document.getElementById('codeBox').style.display = 'flex';
+    document.getElementById('genCodeBtn').style.display = 'none';
+    setSendStatus('相手の接続を待っています…');
+    startShareCountdown();
+  });
+
+  sharePeer.on('connection', (conn) => {
+    shareConn = conn;
+    conn.on('open', () => {
+      conn.send({ type: 'timetable', courses });
+      setSendStatus(`送信しました(${courses.length}件の講義)`, 'ok');
+    });
+    conn.on('error', () => {
+      setSendStatus('送信中にエラーが発生しました。', 'err');
+    });
+  });
+
+  sharePeer.on('error', (err) => {
+    if (err && err.type === 'unavailable-id' && retriesLeft > 0) {
+      try { sharePeer.destroy(); } catch (e) {}
+      tryCreateSharePeer(retriesLeft - 1);
+      return;
+    }
+    setSendStatus('コードの発行に失敗しました。時間をおいて再度お試しください。', 'err');
+    document.getElementById('genCodeBtn').disabled = false;
+  });
+}
+
+function copyShareCode() {
+  const input = document.getElementById('codeOutput');
+  input.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(input.value).catch(() => {
+      document.execCommand('copy');
+    });
+  } else {
+    document.execCommand('copy');
+  }
+  setSendStatus('コードをコピーしました');
+}
+
+function connectToShareCode() {
+  const code = document.getElementById('receiveCodeInput').value.trim();
+  if (!/^[0-9]{5}$/.test(code)) {
+    setReceiveStatus('5桁の数字コードを入力してください', 'err');
+    return;
+  }
+  if (typeof Peer === 'undefined') {
+    setReceiveStatus('通信ライブラリの読み込みに失敗しました。通信環境を確認してください。', 'err');
+    return;
+  }
+
+  cleanupShare();
+  document.getElementById('importSummary').style.display = 'none';
+  document.getElementById('importActions').style.display = 'none';
+  pendingImport = null;
+  setReceiveStatus('接続しています…');
+
+  sharePeer = new Peer();
+
+  sharePeer.on('open', () => {
+    shareConn = sharePeer.connect(code, { reliable: true });
+
+    shareConn.on('open', () => {
+      setReceiveStatus('接続しました。データを待っています…');
+    });
+
+    shareConn.on('data', (data) => {
+      if (data && data.type === 'timetable' && Array.isArray(data.courses)) {
+        const valid = sanitizeIncomingCourses(data.courses);
+        pendingImport = valid;
+        setReceiveStatus(`受信しました(${valid.length}件)`, 'ok');
+        const summary = document.getElementById('importSummary');
+        summary.textContent = valid.length
+          ? valid.map(c => `${c.day} ${PERIODS.find(p => p.id === c.period).label} ${c.name}`).join(' / ')
+          : '有効な講義データがありませんでした。';
+        summary.style.display = 'block';
+        document.getElementById('importActions').style.display = valid.length ? 'flex' : 'none';
+      }
+    });
+
+    shareConn.on('error', () => {
+      setReceiveStatus('データの受信中にエラーが発生しました。', 'err');
+    });
+  });
+
+  sharePeer.on('error', () => {
+    setReceiveStatus('接続できませんでした。コードを確認してください。', 'err');
+  });
+}
+
+function sanitizeIncomingCourses(list) {
+  const out = [];
+  list.forEach((c) => {
+    if (!c || typeof c !== 'object') return;
+    if (!DAYS.includes(c.day)) return;
+    if (!PERIODS.some(p => p.id === c.period)) return;
+    const name = String(c.name || '').trim();
+    if (!name) return;
+    const room = String(c.room || '').trim();
+    let colorIdx = Number(c.colorIdx);
+    if (!Number.isInteger(colorIdx) || colorIdx < 0 || colorIdx >= PALETTE.length) colorIdx = 0;
+    out.push({ day: c.day, period: c.period, name, room, colorIdx });
+  });
+  return out;
+}
+
+async function importMerge() {
+  if (!pendingImport || !pendingImport.length) return;
+  let working = courses;
+  pendingImport.forEach(s => {
+    working = working.filter(c => !(c.day === s.day && c.period === s.period));
+  });
+  const added = pendingImport.map(c => ({ ...c, id: uid() }));
+  await saveCourses([...working, ...added]);
+  renderGrid();
+  closeShareModal();
+}
+
+async function importReplace() {
+  if (!pendingImport || !pendingImport.length) return;
+  const replaced = pendingImport.map(c => ({ ...c, id: uid() }));
+  await saveCourses(replaced);
+  renderGrid();
+  closeShareModal();
+}
+
+function importDiscard() {
+  pendingImport = null;
+  document.getElementById('importSummary').style.display = 'none';
+  document.getElementById('importActions').style.display = 'none';
+  setReceiveStatus('取り込みませんでした');
+}
+
+// --- init ---
+document.getElementById('addBtn').addEventListener('click', () => openNewForm());
+document.getElementById('addSlotBtn').addEventListener('click', addSlot);
+document.getElementById('cancelBtn').addEventListener('click', closeForm);
+document.getElementById('saveBtn').addEventListener('click', submitForm);
+document.getElementById('deleteBtn').addEventListener('click', deleteCourse);
+document.getElementById('overlay').addEventListener('click', closeForm);
+
+document.getElementById('shareBtn').addEventListener('click', openShareModal);
+document.getElementById('shareCloseBtn').addEventListener('click', closeShareModal);
+document.getElementById('shareOverlay').addEventListener('click', closeShareModal);
+document.getElementById('tabSend').addEventListener('click', () => switchShareTab('send'));
+document.getElementById('tabReceive').addEventListener('click', () => switchShareTab('receive'));
+document.getElementById('genCodeBtn').addEventListener('click', generateShareCode);
+document.getElementById('copyCodeBtn').addEventListener('click', copyShareCode);
+document.getElementById('connectBtn').addEventListener('click', connectToShareCode);
+document.getElementById('receiveCodeInput').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+});
+document.getElementById('importMergeBtn').addEventListener('click', importMerge);
+document.getElementById('importReplaceBtn').addEventListener('click', importReplace);
+document.getElementById('importDiscardBtn').addEventListener('click', importDiscard);
+
+(async function init() {
+  courses = await loadCourses();
+  renderGrid();
+})();
+</script>
+
+</body>
+</html>
