@@ -74,6 +74,7 @@
   .grid-scroll {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
 
   #saveError {
@@ -332,7 +333,7 @@
 
   <div id="loading" class="loading">読み込み中…</div>
   <p class="scroll-hint" id="scrollHint">← 横にスクロールできます →</p>
-  <div class="grid-scroll">
+  <div class="grid-scroll" id="gridScrollContainer">
     <div id="grid" class="grid" style="display:none;"></div>
   </div>
 </div>
@@ -435,14 +436,12 @@ const PALETTE = [
 const STORAGE_KEY = "timetable:courses";
 
 let courses = [];
-let currentForm = null; // {id, name, room, colorIdx, slots: [{day, period}, ...]}
+let currentForm = null;
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// --- storage layer: uses window.storage if available (Claude artifact),
-// otherwise falls back to localStorage for standalone use in a browser ---
 async function loadCourses() {
   try {
     if (window.storage) {
@@ -450,9 +449,7 @@ async function loadCourses() {
       if (res && res.value) return JSON.parse(res.value);
       return [];
     }
-  } catch (e) {
-    // key not found or storage unavailable, fall through
-  }
+  } catch (e) {}
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -470,9 +467,7 @@ async function saveCourses(next) {
       hideSaveError();
       return;
     }
-  } catch (e) {
-    // fall through to localStorage
-  }
+  } catch (e) {}
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     hideSaveError();
@@ -488,7 +483,6 @@ function findCourse(day, periodId) {
   return courses.find(c => c.day === day && c.period === periodId);
 }
 
-// --- render grid ---
 function renderGrid() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
@@ -529,6 +523,32 @@ function renderGrid() {
 
   grid.style.display = 'grid';
   document.getElementById('loading').style.display = 'none';
+
+  // Scroll to today's day column if screen is small
+  scrollToTodayColumn();
+}
+
+function scrollToTodayColumn() {
+  const container = document.getElementById('gridScrollContainer');
+  if (!container) return;
+
+  const jsDay = new Date().getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+  let dayIndex = 0; // default to Monday (0)
+  if (jsDay >= 1 && jsDay <= 5) {
+    dayIndex = jsDay - 1; // Mon=0, Tue=1, Wed=2, Thu=3, Fri=4
+  } else {
+    // Sat (6) or Sun (0) -> treat as Monday (0)
+    dayIndex = 0;
+  }
+
+  // Find the day header elements
+  const dayHeads = container.querySelectorAll('.day-head');
+  if (dayHeads && dayHeads[dayIndex]) {
+    const targetHead = dayHeads[dayIndex];
+    // Calculate offset left relative to container or scrollLeft
+    const scrollLeftPos = targetHead.offsetLeft - targetHead.parentElement.offsetLeft;
+    container.scrollLeft = Math.max(0, scrollLeftPos);
+  }
 }
 
 function escapeHtml(str) {
@@ -537,7 +557,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// --- modal form: slots (day/period pairs) ---
 function renderSlotsUI() {
   const list = document.getElementById('slotsList');
   list.innerHTML = '';
@@ -664,13 +683,10 @@ async function submitForm() {
     return;
   }
 
-  // dedupe slots by day+period, keeping the last selection for each
   const dedup = new Map();
   currentForm.slots.forEach(s => dedup.set(s.day + '_' + s.period, s));
   const slots = Array.from(dedup.values());
 
-  // remove the course being edited (if any) and any existing course
-  // occupying a slot we're about to (re)write, then insert fresh entries
   let working = courses.filter(c => c.id !== currentForm.id);
   slots.forEach(s => {
     working = working.filter(c => !(c.day === s.day && c.period === s.period));
@@ -699,7 +715,6 @@ async function deleteCourse() {
   closeForm();
 }
 
-// --- share via P2P (PeerJS), one-time transfer ---
 let sharePeer = null;
 let shareConn = null;
 let pendingImport = null;
@@ -943,10 +958,9 @@ function importDiscard() {
   pendingImport = null;
   document.getElementById('importSummary').style.display = 'none';
   document.getElementById('importActions').style.display = 'none';
-  setReceiveStatus('取り込みませんでした');
+  setReceiveStatus('取り込まませんでした');
 }
 
-// --- init ---
 document.getElementById('addBtn').addEventListener('click', () => openNewForm());
 document.getElementById('addSlotBtn').addEventListener('click', addSlot);
 document.getElementById('cancelBtn').addEventListener('click', closeForm);
