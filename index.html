@@ -65,16 +65,9 @@
   #shareBtn:hover { background: #EFEADD; }
   #shareBtn:active { transform: scale(0.98); }
 
-  .scroll-hint {
-    display: none;
-    font-size: 12px;
-    color: #8A8676;
-    margin-bottom: 8px;
-  }
   .grid-scroll {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
   }
 
   #saveError {
@@ -92,8 +85,8 @@
     border-radius: 4px;
     background: #fff;
     display: grid;
-    grid-template-columns: 88px repeat(5, minmax(96px, 1fr));
-    min-width: 640px;
+    grid-template-columns: minmax(48px, 88px) repeat(5, 1fr);
+    width: 100%;
   }
   .corner {
     background: #EFEADD;
@@ -301,18 +294,33 @@
     h1 { font-size: 24px; }
     header p { font-size: 12px; }
     #addBtn { padding: 10px 14px; font-size: 13px; }
-    .scroll-hint { display: block; text-align: center; }
     .modal { width: 100%; padding: 20px; }
     .row2 { gap: 6px; }
     .slot-row select { padding: 10px; font-size: 16px; }
     .removeSlotBtn { width: 34px; height: 34px; font-size: 16px; }
     .field select, .field input { padding: 10px; font-size: 16px; }
     .swatch { width: 32px; height: 32px; }
+
+    .grid { grid-template-columns: minmax(38px, 60px) repeat(5, 1fr); }
+    .day-head { font-size: 14px; padding: 8px 2px; }
+    .period-cell { padding: 6px 3px; }
+    .period-cell .p-label { font-size: 11px; }
+    .period-cell .p-time { font-size: 9px; }
+    .cell { padding: 5px 4px; min-height: 52px; }
+    .cell .c-name { font-size: 11px; }
+    .cell .c-room { font-size: 10px; }
   }
 
   @media (max-width: 380px) {
     h1 { font-size: 21px; }
-    .grid { grid-template-columns: 74px repeat(5, minmax(84px, 1fr)); min-width: 560px; }
+    .grid { grid-template-columns: minmax(28px, 44px) repeat(5, 1fr); }
+    .day-head { font-size: 12px; padding: 6px 1px; }
+    .period-cell { padding: 4px 2px; }
+    .period-cell .p-label { font-size: 10px; }
+    .period-cell .p-time { font-size: 8px; }
+    .cell { padding: 4px 3px; min-height: 46px; }
+    .cell .c-name { font-size: 10px; }
+    .cell .c-room { font-size: 9px; }
   }
 </style>
 </head>
@@ -332,8 +340,7 @@
   <div id="saveError">保存に失敗しました。もう一度お試しください。</div>
 
   <div id="loading" class="loading">読み込み中…</div>
-  <p class="scroll-hint" id="scrollHint">← 横にスクロールできます →</p>
-  <div class="grid-scroll" id="gridScrollContainer">
+  <div class="grid-scroll">
     <div id="grid" class="grid" style="display:none;"></div>
   </div>
 </div>
@@ -436,12 +443,14 @@ const PALETTE = [
 const STORAGE_KEY = "timetable:courses";
 
 let courses = [];
-let currentForm = null;
+let currentForm = null; // {id, name, room, colorIdx, slots: [{day, period}, ...]}
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+// --- storage layer: uses window.storage if available (Claude artifact),
+// otherwise falls back to localStorage for standalone use in a browser ---
 async function loadCourses() {
   try {
     if (window.storage) {
@@ -449,7 +458,9 @@ async function loadCourses() {
       if (res && res.value) return JSON.parse(res.value);
       return [];
     }
-  } catch (e) {}
+  } catch (e) {
+    // key not found or storage unavailable, fall through
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -467,7 +478,9 @@ async function saveCourses(next) {
       hideSaveError();
       return;
     }
-  } catch (e) {}
+  } catch (e) {
+    // fall through to localStorage
+  }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     hideSaveError();
@@ -483,6 +496,7 @@ function findCourse(day, periodId) {
   return courses.find(c => c.day === day && c.period === periodId);
 }
 
+// --- render grid ---
 function renderGrid() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
@@ -523,32 +537,6 @@ function renderGrid() {
 
   grid.style.display = 'grid';
   document.getElementById('loading').style.display = 'none';
-
-  // Scroll to today's day column if screen is small
-  scrollToTodayColumn();
-}
-
-function scrollToTodayColumn() {
-  const container = document.getElementById('gridScrollContainer');
-  if (!container) return;
-
-  const jsDay = new Date().getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
-  let dayIndex = 0; // default to Monday (0)
-  if (jsDay >= 1 && jsDay <= 5) {
-    dayIndex = jsDay - 1; // Mon=0, Tue=1, Wed=2, Thu=3, Fri=4
-  } else {
-    // Sat (6) or Sun (0) -> treat as Monday (0)
-    dayIndex = 0;
-  }
-
-  // Find the day header elements
-  const dayHeads = container.querySelectorAll('.day-head');
-  if (dayHeads && dayHeads[dayIndex]) {
-    const targetHead = dayHeads[dayIndex];
-    // Calculate offset left relative to container or scrollLeft
-    const scrollLeftPos = targetHead.offsetLeft - targetHead.parentElement.offsetLeft;
-    container.scrollLeft = Math.max(0, scrollLeftPos);
-  }
 }
 
 function escapeHtml(str) {
@@ -557,6 +545,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// --- modal form: slots (day/period pairs) ---
 function renderSlotsUI() {
   const list = document.getElementById('slotsList');
   list.innerHTML = '';
@@ -683,10 +672,13 @@ async function submitForm() {
     return;
   }
 
+  // dedupe slots by day+period, keeping the last selection for each
   const dedup = new Map();
   currentForm.slots.forEach(s => dedup.set(s.day + '_' + s.period, s));
   const slots = Array.from(dedup.values());
 
+  // remove the course being edited (if any) and any existing course
+  // occupying a slot we're about to (re)write, then insert fresh entries
   let working = courses.filter(c => c.id !== currentForm.id);
   slots.forEach(s => {
     working = working.filter(c => !(c.day === s.day && c.period === s.period));
@@ -715,6 +707,7 @@ async function deleteCourse() {
   closeForm();
 }
 
+// --- share via P2P (PeerJS), one-time transfer ---
 let sharePeer = null;
 let shareConn = null;
 let pendingImport = null;
@@ -958,9 +951,10 @@ function importDiscard() {
   pendingImport = null;
   document.getElementById('importSummary').style.display = 'none';
   document.getElementById('importActions').style.display = 'none';
-  setReceiveStatus('取り込まませんでした');
+  setReceiveStatus('取り込みませんでした');
 }
 
+// --- init ---
 document.getElementById('addBtn').addEventListener('click', () => openNewForm());
 document.getElementById('addSlotBtn').addEventListener('click', addSlot);
 document.getElementById('cancelBtn').addEventListener('click', closeForm);
