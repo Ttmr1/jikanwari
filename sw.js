@@ -1,4 +1,4 @@
-const CACHE_NAME = "timetable-app-v2";
+const CACHE_NAME = "timetable-app-v3";
 const APP_SHELL = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -17,11 +17,13 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Cache-first for same-origin GET requests (the app shell), so the app keeps
-// working offline. Cross-origin requests (Google Fonts, the PeerJS CDN
-// script used only for sharing) are left alone and just go to the network;
-// if they fail while offline, the app already handles that gracefully since
-// sharing isn't expected to work offline.
+// Network-first for same-origin GET requests (the app shell): always try to
+// get the latest file when online, so pushing updates (e.g. to GitHub
+// Pages) actually shows up. Only fall back to the cached copy when the
+// network request fails (offline). Cross-origin requests (Google Fonts,
+// the PeerJS CDN script used only for sharing) are left alone; if they fail
+// while offline, the app already handles that gracefully since sharing
+// isn't expected to work offline.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -30,17 +32,14 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-    })
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });
