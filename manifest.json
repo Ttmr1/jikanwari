@@ -1,4 +1,5 @@
 {
+  "id": "./index.html",
   "name": "時間割",
   "short_name": "時間割",
   "description": "複数パターンの時間割を管理できるアプリ",
