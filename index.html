@@ -1161,6 +1161,16 @@ function renderPeriodsSettings() {
     input.addEventListener('change', () => updatePeriodTime(p.id, input.value));
     row.appendChild(input);
 
+    if (PERIODS.length > 1) {
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'pattern-icon-btn danger';
+      delBtn.textContent = '🗑';
+      delBtn.setAttribute('aria-label', `${p.label}を削除`);
+      delBtn.addEventListener('click', () => deletePeriod(p.id));
+      row.appendChild(delBtn);
+    }
+
     list.appendChild(row);
   });
 }
@@ -1185,6 +1195,23 @@ async function addPeriod() {
   await persistAppData();
   const input = document.querySelector(`#periodsSettingsList input[data-id="${id}"]`);
   if (input) input.focus();
+}
+
+async function deletePeriod(id) {
+  if (PERIODS.length <= 1) return;
+  const p = PERIODS.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`「${p.label}」を削除しますか?すべての時間割で、このコマに登録されている講義も削除されます。`)) return;
+
+  PERIODS = PERIODS.filter(x => x.id !== id);
+  // a course referencing a deleted period would otherwise linger invisibly
+  // in storage, so clean it up across every pattern (periods are shared/global)
+  patterns.forEach(pat => { pat.courses = pat.courses.filter(c => c.period !== id); });
+  courses = getActivePattern().courses;
+
+  renderPeriodsSettings();
+  renderGrid();
+  await persistAppData();
 }
 
 // --- screen lock: toggles between "講義を登録" (tap a cell to register) and
