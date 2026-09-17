@@ -1,4 +1,4 @@
-const CACHE_NAME = "timetable-app-v3";
+const CACHE_NAME = "timetable-app-v7";
 const APP_SHELL = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {

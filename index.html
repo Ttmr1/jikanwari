@@ -107,6 +107,124 @@
   .grid.locked .cell { cursor: default; }
   .grid.locked .cell:hover, .grid.locked .cell:active { filter: none; }
 
+  .calendar-section {
+    margin-top: 28px;
+    background: #fff;
+    border: 1px solid #24344D;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .calendar-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #24344D;
+    font-family: 'Shippori Mincho', serif;
+  }
+  .cal-nav-btn {
+    background: none;
+    border: 1px solid #cfc9b8;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    color: #24344D;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-nav-btn:hover { background: #F5F1E6; }
+  .calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    font-size: 11px;
+    color: #8A8676;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .calendar-weekdays span:first-child { color: #B23A3A; }
+  .calendar-weekdays span:last-child { color: #3A5FB2; }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-day {
+    min-height: 52px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: #FAF7EF;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 2px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-day:hover { background: #EFEADD; }
+  .cal-day.other-month { visibility: hidden; pointer-events: none; }
+  .cal-day.today { border-color: #24344D; }
+  .cal-day.today .cal-day-num { font-weight: 700; }
+  .cal-day.has-memo { background: #F3E48F; }
+  .cal-day.has-memo:hover { background: #ecd96f; }
+  .cal-day .cal-day-num { font-size: 12px; color: #2E2C27; }
+  .cal-day:nth-child(7n+1) .cal-day-num { color: #B23A3A; }
+  .cal-day:nth-child(7n) .cal-day-num { color: #3A5FB2; }
+  .cal-day .cal-memo-preview {
+    font-size: 9px;
+    color: #5C594E;
+    margin-top: 3px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #memoTextarea {
+    width: 100%;
+    min-height: 140px;
+    margin-top: 4px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #cfc9b8;
+    font-family: inherit;
+    font-size: 14px;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+
+  .general-memo-section {
+    margin-top: 20px;
+    background: #fff;
+    border: 1px solid #24344D;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .general-memo-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #24344D;
+    margin-bottom: 8px;
+    font-family: 'Shippori Mincho', serif;
+  }
+  #generalMemoTextarea {
+    width: 100%;
+    min-height: 128px; /* ~5 lines; resize:vertical lets it grow, never below this */
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #cfc9b8;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+
   .pattern-menu {
     display: none;
     position: absolute;
@@ -234,6 +352,10 @@
     color: #24344D;
   }
   .day-head:last-child, .cell:nth-child(7n) { border-right: 1px solid #24344D; }
+  .day-head.today {
+    background: #24344D;
+    color: #FAF7EF;
+  }
   .period-cell {
     border-bottom: 1px solid #d8d3c4;
     border-right: 1px solid #24344D;
@@ -435,6 +557,11 @@
     .cell { padding: 5px 4px; min-height: 52px; }
     .cell .c-name { font-size: 11px; }
     .cell .c-room { font-size: 10px; }
+
+    .calendar-section { padding: 12px; }
+    .cal-day { min-height: 42px; }
+    .cal-day .cal-day-num { font-size: 11px; }
+    .cal-day .cal-memo-preview { font-size: 8px; }
   }
 
   @media (max-width: 380px) {
@@ -447,6 +574,9 @@
     .cell { padding: 4px 3px; min-height: 46px; }
     .cell .c-name { font-size: 10px; }
     .cell .c-room { font-size: 9px; }
+
+    .cal-day { min-height: 36px; }
+    .calendar-weekdays { font-size: 10px; }
   }
 </style>
 </head>
@@ -472,6 +602,23 @@
   <p class="lock-banner" id="lockBanner">🔒 画面ロック中です。「講義を登録」を押すとロックが解除されます。</p>
   <div class="grid-scroll">
     <div id="grid" class="grid" style="display:none;"></div>
+  </div>
+
+  <div class="calendar-section">
+    <div class="calendar-header">
+      <button type="button" id="calPrevBtn" class="cal-nav-btn" aria-label="前の月">‹</button>
+      <div class="calendar-title" id="calendarTitle">2026年9月</div>
+      <button type="button" id="calNextBtn" class="cal-nav-btn" aria-label="次の月">›</button>
+    </div>
+    <div class="calendar-weekdays">
+      <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <div class="general-memo-section">
+    <div class="general-memo-title">メモ</div>
+    <textarea id="generalMemoTextarea" rows="5" placeholder="自由にメモを書けます"></textarea>
   </div>
 </div>
 
@@ -560,6 +707,20 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="memoOverlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="memoModalTitle">メモ</h2>
+    <textarea id="memoTextarea" placeholder="この日の予定やメモを入力"></textarea>
+    <div class="modal-actions" style="margin-top:16px;">
+      <div><button class="btn btn-danger" id="memoDeleteBtn" style="display:none;">削除</button></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="memoCancelBtn">キャンセル</button>
+        <button class="btn btn-primary" id="memoSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const DAYS = ["月", "火", "水", "木", "金"];
 const DEFAULT_PERIODS = [
@@ -595,6 +756,12 @@ let currentForm = null; // {id, name, room, colorIdx, slots: [{day, period}, ...
 let renamingPatternId = null;
 let patternMenuOpen = false;
 let screenLocked = false;
+let memos = {};              // { "YYYY-MM-DD": "memo text", ... } — independent of patterns
+let calendarYear = 0;
+let calendarMonth = 0;       // 0-indexed
+let selectedMemoDate = null;
+let generalMemo = "";
+let generalMemoSaveTimer = null;
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -646,6 +813,8 @@ async function loadAppData() {
       if (data && Array.isArray(data.patterns) && data.patterns.length) {
         if (!data.patterns.some(p => p.id === data.activeId)) data.activeId = data.patterns[0].id;
         if (!Array.isArray(data.periods) || !data.periods.length) data.periods = clonePeriods(DEFAULT_PERIODS);
+        if (!data.memos || typeof data.memos !== 'object') data.memos = {};
+        if (typeof data.generalMemo !== 'string') data.generalMemo = '';
         return data;
       }
     } catch (e) {
@@ -665,11 +834,13 @@ async function loadAppData() {
     patterns: [{ id: firstId, name: '時間割1', courses: legacyCourses }],
     activeId: firstId,
     periods: clonePeriods(DEFAULT_PERIODS),
+    memos: {},
+    generalMemo: '',
   };
 }
 
 async function persistAppData() {
-  const ok = await writeStorageRaw(STORAGE_KEY, JSON.stringify({ patterns, activeId: activePatternId, periods: PERIODS }));
+  const ok = await writeStorageRaw(STORAGE_KEY, JSON.stringify({ patterns, activeId: activePatternId, periods: PERIODS, memos, generalMemo }));
   if (ok) hideSaveError(); else showSaveError();
 }
 
@@ -865,9 +1036,11 @@ function renderGrid() {
   corner.className = 'corner';
   grid.appendChild(corner);
 
-  DAYS.forEach(d => {
+  const todayDayIndex = new Date().getDay() - 1; // DAYS[0]="月"=1 ... DAYS[4]="金"=5; -1/5=weekend, no match
+
+  DAYS.forEach((d, i) => {
     const head = document.createElement('div');
-    head.className = 'day-head';
+    head.className = 'day-head' + (i === todayDayIndex ? ' today' : '');
     head.textContent = d;
     grid.appendChild(head);
   });
@@ -1214,6 +1387,100 @@ async function deletePeriod(id) {
   await persistAppData();
 }
 
+// --- calendar-style memo, independent of the weekly timetable patterns ---
+function pad2(n) { return String(n).padStart(2, '0'); }
+function dateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+function renderCalendar() {
+  document.getElementById('calendarTitle').textContent = `${calendarYear}年${calendarMonth + 1}月`;
+
+  const grid = document.getElementById('calendarGrid');
+  grid.innerHTML = '';
+
+  const firstWeekday = new Date(calendarYear, calendarMonth, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+  const today = new Date();
+  const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  for (let i = 0; i < firstWeekday; i++) {
+    const filler = document.createElement('div');
+    filler.className = 'cal-day other-month';
+    grid.appendChild(filler);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = dateKey(calendarYear, calendarMonth, d);
+    const cell = document.createElement('div');
+    cell.className = 'cal-day' + (key === todayKey ? ' today' : '') + (memos[key] ? ' has-memo' : '');
+
+    const num = document.createElement('div');
+    num.className = 'cal-day-num';
+    num.textContent = String(d);
+    cell.appendChild(num);
+
+    if (memos[key]) {
+      const preview = document.createElement('div');
+      preview.className = 'cal-memo-preview';
+      preview.textContent = memos[key];
+      cell.appendChild(preview);
+    }
+
+    cell.addEventListener('click', () => openMemoModal(key));
+    grid.appendChild(cell);
+  }
+}
+
+function changeCalendarMonth(delta) {
+  calendarMonth += delta;
+  if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+  else if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+  renderCalendar();
+}
+
+function openMemoModal(key) {
+  selectedMemoDate = key;
+  const [y, m, d] = key.split('-').map(Number);
+  document.getElementById('memoModalTitle').textContent = `${y}年${m}月${d}日のメモ`;
+  document.getElementById('memoTextarea').value = memos[key] || '';
+  document.getElementById('memoDeleteBtn').style.display = memos[key] ? 'inline-block' : 'none';
+  document.getElementById('memoOverlay').classList.add('open');
+}
+
+function closeMemoModal() {
+  document.getElementById('memoOverlay').classList.remove('open');
+  selectedMemoDate = null;
+}
+
+async function saveMemo() {
+  if (!selectedMemoDate) return;
+  const text = document.getElementById('memoTextarea').value.trim();
+  if (text) memos[selectedMemoDate] = text;
+  else delete memos[selectedMemoDate];
+  renderCalendar();
+  closeMemoModal();
+  await persistAppData();
+}
+
+async function deleteMemo() {
+  if (!selectedMemoDate) return;
+  delete memos[selectedMemoDate];
+  renderCalendar();
+  closeMemoModal();
+  await persistAppData();
+}
+
+// --- general free-text memo box (below the calendar, always visible) ---
+function scheduleGeneralMemoSave() {
+  clearTimeout(generalMemoSaveTimer);
+  generalMemoSaveTimer = setTimeout(saveGeneralMemoNow, 600);
+}
+
+async function saveGeneralMemoNow() {
+  clearTimeout(generalMemoSaveTimer);
+  generalMemo = document.getElementById('generalMemoTextarea').value;
+  await persistAppData();
+}
+
 // --- screen lock: toggles between "講義を登録" (tap a cell to register) and
 // "画面ロック" (grid taps do nothing, to avoid accidental edits) ---
 function toggleScreenLock() {
@@ -1419,6 +1686,14 @@ document.getElementById('shareOverlay').addEventListener('click', closeShareModa
 document.getElementById('settingsCloseBtn').addEventListener('click', closeSettingsModal);
 document.getElementById('settingsOverlay').addEventListener('click', closeSettingsModal);
 document.getElementById('addPeriodBtn').addEventListener('click', addPeriod);
+document.getElementById('calPrevBtn').addEventListener('click', () => changeCalendarMonth(-1));
+document.getElementById('calNextBtn').addEventListener('click', () => changeCalendarMonth(1));
+document.getElementById('memoCancelBtn').addEventListener('click', closeMemoModal);
+document.getElementById('memoSaveBtn').addEventListener('click', saveMemo);
+document.getElementById('memoDeleteBtn').addEventListener('click', deleteMemo);
+document.getElementById('memoOverlay').addEventListener('click', closeMemoModal);
+document.getElementById('generalMemoTextarea').addEventListener('input', scheduleGeneralMemoSave);
+document.getElementById('generalMemoTextarea').addEventListener('blur', saveGeneralMemoNow);
 document.getElementById('tabSend').addEventListener('click', () => switchShareTab('send'));
 document.getElementById('tabReceive').addEventListener('click', () => switchShareTab('receive'));
 document.getElementById('genCodeBtn').addEventListener('click', generateShareCode);
@@ -1446,9 +1721,16 @@ document.addEventListener('click', (e) => {
   patterns = data.patterns;
   activePatternId = data.activeId;
   PERIODS = data.periods;
+  memos = data.memos;
+  generalMemo = data.generalMemo;
   courses = getActivePattern().courses;
+  const today = new Date();
+  calendarYear = today.getFullYear();
+  calendarMonth = today.getMonth();
   updatePatternMenuButton();
   renderGrid();
+  renderCalendar();
+  document.getElementById('generalMemoTextarea').value = generalMemo;
   await persistAppData();
 })();
 
