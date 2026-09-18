@@ -215,7 +215,7 @@
   .cal-day.today { border-color: #24344D; }
   .cal-day.today .cal-day-num { font-weight: 700; }
   .cal-day.has-memo { background: #F3E48F; }
-  .cal-day.has-memo:hover { background: #ecd96f; }
+  .cal-day.has-memo:hover { filter: brightness(0.93); }
   .cal-day .cal-day-num { font-size: 12px; color: #2E2C27; }
   .cal-day:nth-child(7n+1) .cal-day-num { color: #B23A3A; }
   .cal-day:nth-child(7n) .cal-day-num { color: #3A5FB2; }
@@ -293,6 +293,25 @@
     font-size: 12px;
     font-weight: 700;
     color: #8A8676;
+  }
+  .modal.modal-view-lg {
+    width: 460px;
+    padding: 34px 30px;
+  }
+  .modal-view-lg .view-course-name {
+    font-size: 30px;
+    margin-bottom: 24px;
+  }
+  .modal-view-lg .view-course-meta {
+    gap: 16px;
+  }
+  .modal-view-lg .view-meta-row {
+    font-size: 20px;
+    gap: 16px;
+  }
+  .modal-view-lg .view-meta-label {
+    font-size: 14px;
+    width: 60px;
   }
 
   .pattern-menu {
@@ -615,6 +634,49 @@
   }
   .share-status.err { color: #B23A3A; }
   .share-status.ok { color: #3B6D11; }
+  .share-select-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 10px 0 14px;
+  }
+  .share-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #2E2C27;
+    cursor: pointer;
+    padding: 5px 0;
+  }
+  .share-check-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #24344D;
+    cursor: pointer;
+  }
+  .share-pattern-list {
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    margin: 0 0 4px 26px;
+  }
+  .share-pattern-list.show { display: flex; }
+  .share-pattern-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #5C594E;
+    cursor: pointer;
+    padding: 2px 0;
+  }
+  .share-pattern-row input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #24344D;
+    cursor: pointer;
+  }
   .import-summary {
     background: #EFEADD;
     border-radius: 6px;
@@ -622,6 +684,20 @@
     margin: 12px 0;
     font-size: 13px;
     color: #2E2C27;
+  }
+  .preview-section { margin-bottom: 12px; }
+  .preview-section:last-child { margin-bottom: 0; }
+  .preview-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #24344D;
+    margin-bottom: 5px;
+  }
+  .preview-memo-snippet {
+    font-size: 12px;
+    color: #5C594E;
+    line-height: 1.5;
+    white-space: pre-wrap;
   }
   .preview-grid-wrap { overflow-x: auto; }
   .preview-grid {
@@ -790,7 +866,7 @@
 </div>
 
 <div class="modal-overlay" id="viewOverlay">
-  <div class="modal" onclick="event.stopPropagation()">
+  <div class="modal modal-view-lg" onclick="event.stopPropagation()">
     <div class="view-course-name" id="viewCourseName"></div>
     <div class="view-course-meta">
       <div class="view-meta-row"><span class="view-meta-label">場所</span><span id="viewCourseRoom"></span></div>
@@ -816,6 +892,23 @@
 
     <div class="share-panel active" id="sendPanel">
       <p class="share-desc">発行から10分間有効です。</p>
+      <div class="share-select-group">
+        <label class="share-check-row">
+          <input type="checkbox" id="shareIncludeTimetable" checked />
+          <span>時間割</span>
+        </label>
+        <div class="share-pattern-list" id="sharePatternList"></div>
+
+        <label class="share-check-row">
+          <input type="checkbox" id="shareIncludeCalendar" />
+          <span>カレンダー</span>
+        </label>
+
+        <label class="share-check-row">
+          <input type="checkbox" id="shareIncludeMemo" />
+          <span>メモ</span>
+        </label>
+      </div>
       <button class="btn btn-primary" id="genCodeBtn" style="width:100%;">コードを発行する</button>
       <div class="code-box" id="codeBox" style="display:none;">
         <input type="text" id="codeOutput" readonly />
@@ -834,9 +927,8 @@
       <p class="share-status" id="receiveStatus"></p>
       <div class="import-summary" id="importSummary" style="display:none;"></div>
       <div class="import-actions" id="importActions" style="display:none;">
-        <button class="btn btn-primary" id="importMergeBtn">既存に追加する(重複するコマは上書き)</button>
-        <button class="btn btn-ghost" id="importReplaceBtn">置き換える</button>
-        <button class="btn btn-ghost" id="importDiscardBtn">取り込まない</button>
+        <button class="btn btn-primary" id="importAddBtn">追加する</button>
+        <button class="btn btn-ghost" id="importDiscardBtn">キャンセル</button>
       </div>
     </div>
 
@@ -864,6 +956,7 @@
   <div class="modal" onclick="event.stopPropagation()">
     <h2 id="memoModalTitle">メモ</h2>
     <textarea id="memoTextarea" placeholder="この日の予定やメモを入力"></textarea>
+    <div class="color-row" id="memoColorRow"></div>
     <div class="modal-actions" style="margin-top:16px;">
       <div><button class="btn btn-danger" id="memoDeleteBtn" style="display:none;">削除</button></div>
       <div style="display:flex; gap:8px;">
@@ -899,6 +992,14 @@ const PALETTE = [
   { name: "檜皮", bg: "#DCC0A0", text: "#5A3B1D" },
   { name: "鼠", bg: "#D9D6CC", text: "#3A3934" },
 ];
+const MEMO_PALETTE = [
+  { name: "黄", bg: "#F3E48F" },
+  { name: "桃", bg: "#F3C6E2" },
+  { name: "空", bg: "#AFD9F5" },
+  { name: "緑", bg: "#BEE3A8" },
+  { name: "橙", bg: "#F6C99A" },
+];
+let selectedMemoColorIdx = 0;
 const STORAGE_KEY = "timetable:data";
 const LEGACY_STORAGE_KEY = "timetable:courses"; // old single-timetable format, for migration
 
@@ -960,6 +1061,22 @@ async function writeStorageRaw(key, value) {
 
 function clonePeriods(list) { return list.map(p => ({ ...p })); }
 
+function normalizeMemos(raw) {
+  const out = {};
+  if (raw && typeof raw === 'object') {
+    Object.keys(raw).forEach(k => {
+      const v = raw[k];
+      if (typeof v === 'string') {
+        if (v) out[k] = { text: v, colorIdx: 0 };
+      } else if (v && typeof v === 'object' && typeof v.text === 'string' && v.text) {
+        const colorIdx = Number.isInteger(v.colorIdx) && MEMO_PALETTE[v.colorIdx] ? v.colorIdx : 0;
+        out[k] = { text: v.text, colorIdx };
+      }
+    });
+  }
+  return out;
+}
+
 async function loadAppData() {
   const raw = await readStorageRaw(STORAGE_KEY);
   if (raw) {
@@ -968,7 +1085,7 @@ async function loadAppData() {
       if (data && Array.isArray(data.patterns) && data.patterns.length) {
         if (!data.patterns.some(p => p.id === data.activeId)) data.activeId = data.patterns[0].id;
         if (!Array.isArray(data.periods) || !data.periods.length) data.periods = clonePeriods(DEFAULT_PERIODS);
-        if (!data.memos || typeof data.memos !== 'object') data.memos = {};
+        data.memos = normalizeMemos(data.memos);
         if (typeof data.generalMemo !== 'string') data.generalMemo = '';
         return data;
       }
@@ -1441,8 +1558,8 @@ async function deleteCourse() {
 // --- share via P2P (PeerJS), one-time transfer ---
 let sharePeer = null;
 let shareConn = null;
+let sharePayload = null;
 let pendingImport = null;
-let pendingImportName = null;
 let shareCountdownInterval = null;
 let shareExpireAt = null;
 
@@ -1489,14 +1606,41 @@ function resetShareUI() {
   document.getElementById('importActions').style.display = 'none';
   setReceiveStatus('');
   pendingImport = null;
-  pendingImportName = null;
 }
 
 function openShareModal() {
   cleanupShare();
   resetShareUI();
+  renderSharePatternList();
+  toggleSharePatternListVisibility();
   switchShareTab('send');
   document.getElementById('shareOverlay').classList.add('open');
+}
+
+function renderSharePatternList() {
+  const list = document.getElementById('sharePatternList');
+  list.innerHTML = '';
+  patterns.forEach(p => {
+    const row = document.createElement('label');
+    row.className = 'share-pattern-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.id = p.id;
+    cb.checked = p.id === activePatternId;
+    row.appendChild(cb);
+
+    const span = document.createElement('span');
+    span.textContent = p.name;
+    row.appendChild(span);
+
+    list.appendChild(row);
+  });
+}
+
+function toggleSharePatternListVisibility() {
+  const show = document.getElementById('shareIncludeTimetable').checked;
+  document.getElementById('sharePatternList').classList.toggle('show', show);
 }
 
 function closeShareModal() {
@@ -1610,18 +1754,20 @@ function renderCalendar() {
 
   for (let d = 1; d <= daysInMonth; d++) {
     const key = dateKey(calendarYear, calendarMonth, d);
+    const memo = memos[key];
     const cell = document.createElement('div');
-    cell.className = 'cal-day' + (key === todayKey ? ' today' : '') + (memos[key] ? ' has-memo' : '');
+    cell.className = 'cal-day' + (key === todayKey ? ' today' : '') + (memo ? ' has-memo' : '');
+    if (memo) cell.style.background = (MEMO_PALETTE[memo.colorIdx] || MEMO_PALETTE[0]).bg;
 
     const num = document.createElement('div');
     num.className = 'cal-day-num';
     num.textContent = String(d);
     cell.appendChild(num);
 
-    if (memos[key]) {
+    if (memo) {
       const preview = document.createElement('div');
       preview.className = 'cal-memo-preview';
-      preview.textContent = memos[key];
+      preview.textContent = memo.text;
       cell.appendChild(preview);
     }
 
@@ -1637,12 +1783,31 @@ function changeCalendarMonth(delta) {
   renderCalendar();
 }
 
+function renderMemoColorRow() {
+  const row = document.getElementById('memoColorRow');
+  row.innerHTML = '';
+  MEMO_PALETTE.forEach((c, idx) => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (selectedMemoColorIdx === idx ? ' selected' : '');
+    sw.style.background = c.bg;
+    sw.title = c.name;
+    sw.addEventListener('click', () => {
+      selectedMemoColorIdx = idx;
+      renderMemoColorRow();
+    });
+    row.appendChild(sw);
+  });
+}
+
 function openMemoModal(key) {
   selectedMemoDate = key;
   const [y, m, d] = key.split('-').map(Number);
+  const existing = memos[key];
   document.getElementById('memoModalTitle').textContent = `${y}年${m}月${d}日のメモ`;
-  document.getElementById('memoTextarea').value = memos[key] || '';
-  document.getElementById('memoDeleteBtn').style.display = memos[key] ? 'inline-block' : 'none';
+  document.getElementById('memoTextarea').value = existing ? existing.text : '';
+  document.getElementById('memoDeleteBtn').style.display = existing ? 'inline-block' : 'none';
+  selectedMemoColorIdx = (existing && Number.isInteger(existing.colorIdx) && MEMO_PALETTE[existing.colorIdx]) ? existing.colorIdx : 0;
+  renderMemoColorRow();
   document.getElementById('memoOverlay').classList.add('open');
 }
 
@@ -1654,7 +1819,7 @@ function closeMemoModal() {
 async function saveMemo() {
   if (!selectedMemoDate) return;
   const text = document.getElementById('memoTextarea').value.trim();
-  if (text) memos[selectedMemoDate] = text;
+  if (text) memos[selectedMemoDate] = { text, colorIdx: selectedMemoColorIdx };
   else delete memos[selectedMemoDate];
   renderCalendar();
   closeMemoModal();
@@ -1803,11 +1968,38 @@ function updateCountdownDisplay() {
     `有効期限まで ${m}:${String(s).padStart(2, '0')}`;
 }
 
+function buildSharePayload() {
+  const payload = { type: 'timetable' };
+  let hasAny = false;
+
+  if (document.getElementById('shareIncludeTimetable').checked) {
+    const selectedIds = Array.from(document.querySelectorAll('#sharePatternList input[type="checkbox"]:checked')).map(el => el.dataset.id);
+    const selectedPatterns = patterns.filter(p => selectedIds.includes(p.id)).map(p => ({ name: p.name, courses: p.courses }));
+    if (selectedPatterns.length) { payload.patterns = selectedPatterns; hasAny = true; }
+  }
+  if (document.getElementById('shareIncludeCalendar').checked && Object.keys(memos).length) {
+    payload.memos = memos;
+    hasAny = true;
+  }
+  if (document.getElementById('shareIncludeMemo').checked && generalMemo) {
+    payload.generalMemo = generalMemo;
+    hasAny = true;
+  }
+
+  return hasAny ? payload : null;
+}
+
 function generateShareCode() {
   if (typeof Peer === 'undefined') {
     setSendStatus('通信ライブラリの読み込みに失敗しました。通信環境を確認してください。', 'err');
     return;
   }
+  const payload = buildSharePayload();
+  if (!payload) {
+    setSendStatus('共有する内容にチェックを付けてください。', 'err');
+    return;
+  }
+  sharePayload = payload;
   document.getElementById('genCodeBtn').disabled = true;
   setSendStatus('コードを発行しています…');
   tryCreateSharePeer(5);
@@ -1828,8 +2020,12 @@ function tryCreateSharePeer(retriesLeft) {
   sharePeer.on('connection', (conn) => {
     shareConn = conn;
     conn.on('open', () => {
-      conn.send({ type: 'timetable', courses, patternName: getActivePattern().name });
-      setSendStatus(`送信しました(${courses.length}件の講義)`, 'ok');
+      conn.send(sharePayload);
+      const parts = [];
+      if (sharePayload.patterns) parts.push(`時間割${sharePayload.patterns.length}件`);
+      if (sharePayload.memos) parts.push('カレンダー');
+      if (sharePayload.generalMemo) parts.push('メモ');
+      setSendStatus(`送信しました(${parts.join('・')})`, 'ok');
     });
     conn.on('error', () => {
       setSendStatus('送信中にエラーが発生しました。', 'err');
@@ -1875,7 +2071,6 @@ function connectToShareCode() {
   document.getElementById('importSummary').style.display = 'none';
   document.getElementById('importActions').style.display = 'none';
   pendingImport = null;
-  pendingImportName = null;
   setReceiveStatus('接続しています…');
 
   sharePeer = new Peer();
@@ -1888,15 +2083,35 @@ function connectToShareCode() {
     });
 
     shareConn.on('data', (data) => {
-      if (data && data.type === 'timetable' && Array.isArray(data.courses)) {
-        const valid = sanitizeIncomingCourses(data.courses);
-        pendingImport = valid;
-        pendingImportName = typeof data.patternName === 'string' ? data.patternName.trim() : null;
-        setReceiveStatus(`受信しました(${valid.length}件)`, 'ok');
-        renderImportPreview(valid);
-        document.getElementById('importSummary').style.display = 'block';
-        document.getElementById('importActions').style.display = valid.length ? 'flex' : 'none';
-      }
+      if (!data || data.type !== 'timetable') return;
+
+      const recvPatterns = Array.isArray(data.patterns)
+        ? data.patterns
+            .map(p => ({
+              name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : null,
+              courses: sanitizeIncomingCourses(Array.isArray(p.courses) ? p.courses : []),
+            }))
+            .filter(p => p.courses.length)
+        : [];
+      const recvMemos = (data.memos && typeof data.memos === 'object') ? normalizeMemos(data.memos) : null;
+      const recvGeneralMemo = typeof data.generalMemo === 'string' && data.generalMemo.trim() ? data.generalMemo : null;
+
+      pendingImport = {
+        patterns: recvPatterns,
+        memos: (recvMemos && Object.keys(recvMemos).length) ? recvMemos : null,
+        generalMemo: recvGeneralMemo,
+      };
+
+      const gotAny = recvPatterns.length || pendingImport.memos || pendingImport.generalMemo;
+      const parts = [];
+      if (recvPatterns.length) parts.push(`時間割${recvPatterns.length}件`);
+      if (pendingImport.memos) parts.push('カレンダー');
+      if (pendingImport.generalMemo) parts.push('メモ');
+      setReceiveStatus(gotAny ? `受信しました(${parts.join('・')})` : '受信しましたが、有効なデータがありませんでした', gotAny ? 'ok' : 'err');
+
+      renderImportPreview(pendingImport);
+      document.getElementById('importSummary').style.display = 'block';
+      document.getElementById('importActions').style.display = gotAny ? 'flex' : 'none';
     });
 
     shareConn.on('error', () => {
@@ -1909,17 +2124,57 @@ function connectToShareCode() {
   });
 }
 
-// renders the received courses as a compact visual grid (only the rows that
-// actually contain a course, to keep the preview short) instead of plain text
-function renderImportPreview(list) {
+// renders the received data (timetable pattern(s), calendar memos, general
+// memo) as a compact visual preview instead of plain text
+function renderImportPreview(received) {
   const container = document.getElementById('importSummary');
   container.innerHTML = '';
 
-  if (!list.length) {
-    container.textContent = '有効な講義データがありませんでした。';
+  const { patterns: recvPatterns, memos: recvMemos, generalMemo: recvGeneralMemo } = received;
+  if (!recvPatterns.length && !recvMemos && !recvGeneralMemo) {
+    container.textContent = '有効なデータがありませんでした。';
     return;
   }
 
+  recvPatterns.forEach((p, idx) => {
+    const section = document.createElement('div');
+    section.className = 'preview-section';
+
+    const title = document.createElement('div');
+    title.className = 'preview-section-title';
+    title.textContent = p.name || `時間割${idx + 1}`;
+    section.appendChild(title);
+
+    section.appendChild(buildPreviewGrid(p.courses));
+    container.appendChild(section);
+  });
+
+  if (recvMemos) {
+    const section = document.createElement('div');
+    section.className = 'preview-section';
+    const title = document.createElement('div');
+    title.className = 'preview-section-title';
+    title.textContent = `カレンダーの予定(${Object.keys(recvMemos).length}件)`;
+    section.appendChild(title);
+    container.appendChild(section);
+  }
+
+  if (recvGeneralMemo) {
+    const section = document.createElement('div');
+    section.className = 'preview-section';
+    const title = document.createElement('div');
+    title.className = 'preview-section-title';
+    title.textContent = 'メモ';
+    section.appendChild(title);
+    const snippet = document.createElement('div');
+    snippet.className = 'preview-memo-snippet';
+    snippet.textContent = recvGeneralMemo.length > 80 ? recvGeneralMemo.slice(0, 80) + '…' : recvGeneralMemo;
+    section.appendChild(snippet);
+    container.appendChild(section);
+  }
+}
+
+function buildPreviewGrid(list) {
   const usedPeriodIds = new Set(list.map(c => c.period));
   const rows = PERIODS.filter(p => usedPeriodIds.has(p.id));
 
@@ -1961,7 +2216,7 @@ function renderImportPreview(list) {
   });
 
   wrap.appendChild(grid);
-  container.appendChild(wrap);
+  return wrap;
 }
 
 function sanitizeIncomingCourses(list) {
@@ -1980,35 +2235,41 @@ function sanitizeIncomingCourses(list) {
   return out;
 }
 
-async function importMerge() {
-  if (!pendingImport || !pendingImport.length) return;
-  let working = courses;
-  pendingImport.forEach(s => {
-    working = working.filter(c => !(c.day === s.day && c.period === s.period));
-  });
-  const added = pendingImport.map(c => ({ ...c, id: uid() }));
-  await saveCourses([...working, ...added]);
-  renderGrid();
-  closeShareModal();
-}
+// received timetable pattern(s) always come in as brand-new patterns;
+// received calendar memos/general memo are merged into the existing ones
+async function importReceived() {
+  if (!pendingImport) return;
+  const { patterns: recvPatterns, memos: recvMemos, generalMemo: recvGeneralMemo } = pendingImport;
 
-async function importReplace() {
-  if (!pendingImport || !pendingImport.length) return;
-  const replaced = pendingImport.map(c => ({ ...c, id: uid() }));
-  if (pendingImportName) {
-    const active = getActivePattern();
-    if (active) active.name = pendingImportName;
-    updatePatternMenuButton();
-    renderPatternMenu();
+  if (recvPatterns.length) {
+    recvPatterns.forEach(rp => {
+      const newCourses = rp.courses.map(c => ({ ...c, id: uid() }));
+      patterns.push({ id: uid(), name: rp.name || nextDefaultPatternName(), courses: newCourses });
+    });
+    activePatternId = patterns[patterns.length - 1].id;
+    courses = getActivePattern().courses;
   }
-  await saveCourses(replaced);
+
+  if (recvMemos) {
+    Object.keys(recvMemos).forEach(k => { memos[k] = recvMemos[k]; });
+  }
+
+  if (recvGeneralMemo) {
+    generalMemo = generalMemo ? (generalMemo + '\n\n' + recvGeneralMemo) : recvGeneralMemo;
+    document.getElementById('generalMemoTextarea').value = generalMemo;
+  }
+
+  updatePatternMenuButton();
+  renderPatternMenu();
   renderGrid();
+  renderCalendar();
+  pendingImport = null;
+  await persistAppData();
   closeShareModal();
 }
 
 function importDiscard() {
   pendingImport = null;
-  pendingImportName = null;
   document.getElementById('importSummary').style.display = 'none';
   document.getElementById('importActions').style.display = 'none';
   setReceiveStatus('取り込みませんでした');
@@ -2048,9 +2309,9 @@ document.getElementById('connectBtn').addEventListener('click', connectToShareCo
 document.getElementById('receiveCodeInput').addEventListener('input', (e) => {
   e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
 });
-document.getElementById('importMergeBtn').addEventListener('click', importMerge);
-document.getElementById('importReplaceBtn').addEventListener('click', importReplace);
+document.getElementById('importAddBtn').addEventListener('click', importReceived);
 document.getElementById('importDiscardBtn').addEventListener('click', importDiscard);
+document.getElementById('shareIncludeTimetable').addEventListener('change', toggleSharePatternListVisibility);
 
 document.getElementById('patternMenuBtn').addEventListener('click', (e) => {
   e.stopPropagation();
