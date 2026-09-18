@@ -40,21 +40,6 @@
     color: #24344D;
   }
   header p { margin: 4px 0 0; font-size: 13px; color: #8A8676; }
-  #addBtn {
-    background: #24344D;
-    color: #FAF7EF;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 18px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #addBtn:hover { filter: brightness(1.1); }
-  #addBtn:active { transform: scale(0.98); }
   .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .menu-wrap { position: relative; }
@@ -72,7 +57,23 @@
     -webkit-tap-highlight-color: transparent;
   }
   .btn-menu:hover { background: #EFEADD; }
+  .btn-menu:disabled { opacity: 0.35; cursor: default; }
+  .btn-menu:disabled:hover { background: none; }
   .btn-menu:active { transform: scale(0.98); }
+
+  .btn-mode-select {
+    background: #fff;
+    color: #24344D;
+    border: 1px solid #24344D;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-mode-select:hover { background: #EFEADD; }
 
   .settings-periods-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 14px; }
   .settings-period-row { display: flex; align-items: center; gap: 8px; }
@@ -107,6 +108,46 @@
   .grid.locked .cell { cursor: default; }
   .grid.locked .cell:hover, .grid.locked .cell:active { filter: none; }
 
+  .delete-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: #7A2B2B;
+    background: #F3D3D3;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+  }
+  .delete-banner.show { display: flex; }
+  .delete-banner .btn-danger {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+  .delete-banner .btn-danger:disabled { opacity: 0.5; cursor: default; }
+  .cell.selected-for-delete {
+    position: relative;
+    outline: 3px solid #B23A3A;
+    outline-offset: -3px;
+  }
+  .cell.selected-for-delete::after {
+    content: "✓";
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #B23A3A;
+    color: #fff;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+  }
+
   .calendar-section {
     margin-top: 28px;
     background: #fff;
@@ -140,6 +181,8 @@
     -webkit-tap-highlight-color: transparent;
   }
   .cal-nav-btn:hover { background: #F5F1E6; }
+  .cal-nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .cal-nav-btn:disabled:hover { background: none; }
   .calendar-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -225,6 +268,33 @@
     resize: vertical;
   }
 
+  .view-course-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #24344D;
+    font-family: 'Shippori Mincho', serif;
+    margin-bottom: 16px;
+  }
+  .view-course-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .view-meta-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 15px;
+    color: #2E2C27;
+  }
+  .view-meta-label {
+    flex: 0 0 auto;
+    width: 48px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8A8676;
+  }
+
   .pattern-menu {
     display: none;
     position: absolute;
@@ -295,19 +365,21 @@
   }
   .pattern-icon-btn {
     flex: 0 0 auto;
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     border: none;
     background: none;
     color: #8A8676;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1;
     -webkit-tap-highlight-color: transparent;
   }
   .pattern-icon-btn:hover { background: #EFEADD; color: #24344D; }
   .pattern-icon-btn.danger:hover { color: #B23A3A; }
+  .pattern-icon-btn:disabled { opacity: 0.3; cursor: default; }
+  .pattern-icon-btn:disabled:hover { background: none; color: #8A8676; }
 
   .grid-scroll {
     overflow-x: auto;
@@ -351,7 +423,7 @@
     font-weight: 700;
     color: #24344D;
   }
-  .day-head:last-child, .cell:nth-child(7n) { border-right: 1px solid #24344D; }
+  .day-head:last-child, .cell:nth-child(6n) { border-right: 1px solid #24344D; }
   .day-head.today {
     background: #24344D;
     color: #FAF7EF;
@@ -371,6 +443,8 @@
   .period-cell .p-time { margin-top: 2px; white-space: nowrap; font-size: 11px; }
   .row-even { background: #F5F1E6; }
   .row-odd { background: #EDE8DA; }
+  .cell.row-even { background: #F5F1E6; }
+  .cell.row-odd { background: #EDE8DA; }
 
   .cell {
     border-bottom: 1px solid #d8d3c4;
@@ -384,8 +458,24 @@
   }
   .cell:hover { filter: brightness(0.97); }
   .cell:active { filter: brightness(0.93); }
-  .cell .c-name { font-size: 13px; font-weight: 700; line-height: 1.3; word-break: break-word; }
-  .cell .c-room { font-size: 12px; margin-top: 3px; opacity: 0.85; word-break: break-word; }
+  .cell .c-name {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .cell .c-room {
+    font-size: 12px;
+    margin-top: 3px;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .loading { padding: 40px; text-align: center; color: #8A8676; }
 
@@ -528,10 +618,47 @@
   .import-summary {
     background: #EFEADD;
     border-radius: 6px;
-    padding: 12px;
+    padding: 10px;
     margin: 12px 0;
     font-size: 13px;
     color: #2E2C27;
+  }
+  .preview-grid-wrap { overflow-x: auto; }
+  .preview-grid {
+    display: grid;
+    border: 1px solid #24344D;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+    font-size: 10px;
+  }
+  .preview-corner, .preview-day-head {
+    background: #EFEADD;
+    border-bottom: 1px solid #24344D;
+    border-right: 1px solid #d8d3c4;
+    text-align: center;
+    padding: 4px 2px;
+    font-weight: 700;
+    color: #24344D;
+  }
+  .preview-period-label {
+    background: #F5F1E6;
+    border-bottom: 1px solid #d8d3c4;
+    border-right: 1px solid #24344D;
+    padding: 4px 2px;
+    font-size: 9px;
+    text-align: center;
+    color: #5C594E;
+  }
+  .preview-cell {
+    border-bottom: 1px solid #d8d3c4;
+    border-right: 1px solid #d8d3c4;
+    min-height: 30px;
+    padding: 3px 3px;
+    font-size: 9px;
+    line-height: 1.2;
+    overflow: hidden;
+    word-break: break-word;
   }
   .import-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .import-actions .btn { width: 100%; }
@@ -541,7 +668,7 @@
     header { margin-bottom: 16px; }
     h1 { font-size: 24px; }
     header p { font-size: 12px; }
-    #addBtn { padding: 10px 14px; font-size: 13px; }
+    .btn-mode-select { padding: 10px 10px; font-size: 13px; }
     .modal { width: 100%; padding: 20px; }
     .row2 { gap: 6px; }
     .slot-row select { padding: 10px; font-size: 16px; }
@@ -592,14 +719,23 @@
         <button id="patternMenuBtn" class="btn-menu" aria-label="メニューを開く">☰</button>
         <div id="patternMenu" class="pattern-menu"></div>
       </div>
-      <button id="addBtn">講義を登録</button>
+      <select id="modeSelect" class="btn-mode-select" aria-label="モード選択">
+        <option value="view">講義確認</option>
+        <option value="register">講義登録</option>
+        <option value="lock">画面ロック</option>
+        <option value="delete">講義削除</option>
+      </select>
     </div>
   </header>
 
   <div id="saveError">保存に失敗しました。もう一度お試しください。</div>
 
   <div id="loading" class="loading">読み込み中…</div>
-  <p class="lock-banner" id="lockBanner">🔒 画面ロック中です。「講義を登録」を押すとロックが解除されます。</p>
+  <p class="lock-banner" id="lockBanner">🔒 画面ロック中</p>
+  <div class="delete-banner" id="deleteBanner">
+    <span>🗑 削除したい講義をタップして選択(<span id="deleteCount">0</span>件選択中)</span>
+    <button type="button" id="deleteConfirmBtn" class="btn btn-danger" disabled>選択した講義を削除</button>
+  </div>
   <div class="grid-scroll">
     <div id="grid" class="grid" style="display:none;"></div>
   </div>
@@ -653,6 +789,23 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="viewOverlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="view-course-name" id="viewCourseName"></div>
+    <div class="view-course-meta">
+      <div class="view-meta-row"><span class="view-meta-label">場所</span><span id="viewCourseRoom"></span></div>
+      <div class="view-meta-row"><span class="view-meta-label">時間</span><span id="viewCourseTime"></span></div>
+    </div>
+    <div class="modal-actions" style="margin-top:18px;">
+      <div><button class="btn btn-danger" id="viewDeleteBtn">講義削除</button></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="viewCloseBtn">閉じる</button>
+        <button class="btn btn-primary" id="viewEditBtn">講義編集</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="shareOverlay">
   <div class="modal" onclick="event.stopPropagation()">
     <h2>時間割を共有</h2>
@@ -662,7 +815,7 @@
     </div>
 
     <div class="share-panel active" id="sendPanel">
-      <p class="share-desc">コードを発行して相手に伝えてください。相手がそのコードで接続すると、今の時間割が1回だけ送信されます。コードは5桁の数字で、発行から10分間有効です。</p>
+      <p class="share-desc">発行から10分間有効です。</p>
       <button class="btn btn-primary" id="genCodeBtn" style="width:100%;">コードを発行する</button>
       <div class="code-box" id="codeBox" style="display:none;">
         <input type="text" id="codeOutput" readonly />
@@ -682,7 +835,7 @@
       <div class="import-summary" id="importSummary" style="display:none;"></div>
       <div class="import-actions" id="importActions" style="display:none;">
         <button class="btn btn-primary" id="importMergeBtn">既存に追加する(重複するコマは上書き)</button>
-        <button class="btn btn-ghost" id="importReplaceBtn">今の時間割をすべて置き換える</button>
+        <button class="btn btn-ghost" id="importReplaceBtn">置き換える</button>
         <button class="btn btn-ghost" id="importDiscardBtn">取り込まない</button>
       </div>
     </div>
@@ -755,7 +908,9 @@ let courses = [];          // courses of the currently active pattern (kept in s
 let currentForm = null; // {id, name, room, colorIdx, slots: [{day, period}, ...]}
 let renamingPatternId = null;
 let patternMenuOpen = false;
-let screenLocked = false;
+let cellMode = 'view'; // 'view' | 'register' | 'lock' | 'delete'
+let selectedForDelete = new Set();
+let viewingCourse = null;
 let memos = {};              // { "YYYY-MM-DD": "memo text", ... } — independent of patterns
 let calendarYear = 0;
 let calendarMonth = 0;       // 0-indexed
@@ -929,6 +1084,17 @@ async function deletePattern(id) {
   await persistAppData();
 }
 
+async function movePattern(id, delta) {
+  const idx = patterns.findIndex(p => p.id === id);
+  if (idx < 0) return;
+  const newIdx = idx + delta;
+  if (newIdx < 0 || newIdx >= patterns.length) return;
+  const [item] = patterns.splice(idx, 1);
+  patterns.splice(newIdx, 0, item);
+  renderPatternMenu();
+  await persistAppData();
+}
+
 function updatePatternMenuButton() {
   const active = getActivePattern();
   const name = active ? active.name : '時間割';
@@ -973,7 +1139,7 @@ function renderPatternMenu() {
   label.textContent = '時間割';
   menu.appendChild(label);
 
-  patterns.forEach(p => {
+  patterns.forEach((p, idx) => {
     const row = document.createElement('div');
     row.className = 'pattern-row' + (p.id === activePatternId ? ' active' : '');
 
@@ -990,6 +1156,24 @@ function renderPatternMenu() {
       input.addEventListener('blur', () => commitRenamePattern(p.id, input.value));
       row.appendChild(input);
     } else {
+      const upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.className = 'pattern-icon-btn';
+      upBtn.textContent = '▲';
+      upBtn.setAttribute('aria-label', `${p.name}を上へ移動`);
+      upBtn.disabled = idx === 0;
+      upBtn.addEventListener('click', (e) => { e.stopPropagation(); movePattern(p.id, -1); });
+      row.appendChild(upBtn);
+
+      const downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.className = 'pattern-icon-btn';
+      downBtn.textContent = '▼';
+      downBtn.setAttribute('aria-label', `${p.name}を下へ移動`);
+      downBtn.disabled = idx === patterns.length - 1;
+      downBtn.addEventListener('click', (e) => { e.stopPropagation(); movePattern(p.id, 1); });
+      row.appendChild(downBtn);
+
       const nameBtn = document.createElement('button');
       nameBtn.type = 'button';
       nameBtn.className = 'pattern-name-btn';
@@ -1054,16 +1238,15 @@ function renderGrid() {
     DAYS.forEach(d => {
       const course = findCourse(d, p.id);
       const cell = document.createElement('div');
-      cell.className = 'cell';
+      cell.className = 'cell ' + (rowIdx % 2 === 0 ? 'row-even' : 'row-odd');
       if (course) {
         const palette = PALETTE[course.colorIdx];
         cell.style.background = palette.bg;
         cell.innerHTML = `<div class="c-name" style="color:${palette.text}">${escapeHtml(course.name)}</div>` +
           (course.room ? `<div class="c-room" style="color:${palette.text}">${escapeHtml(course.room)}</div>` : '');
-        cell.addEventListener('click', () => { if (!screenLocked) openEditForm(course); });
-      } else {
-        cell.addEventListener('click', () => { if (!screenLocked) openNewForm(d, p.id); });
+        if (cellMode === 'delete' && selectedForDelete.has(course.id)) cell.classList.add('selected-for-delete');
       }
+      cell.addEventListener('click', () => handleCellClick(course, d, p.id));
       grid.appendChild(cell);
     });
   });
@@ -1124,15 +1307,30 @@ function renderSlotsUI() {
 function addSlot() {
   const used = new Set(currentForm.slots.map(s => s.day + '_' + s.period));
   let next = null;
-  outer:
-  for (const d of DAYS) {
-    for (const p of PERIODS) {
-      if (!used.has(d + '_' + p.id)) {
-        next = { day: d, period: p.id };
-        break outer;
+
+  // default: same day as the last slot, the period right after it — wrapping
+  // to Monday's first period once we run past the last configured period
+  const last = currentForm.slots[currentForm.slots.length - 1];
+  if (last) {
+    const lastIdx = PERIODS.findIndex(p => p.id === last.period);
+    const candidate = (lastIdx >= 0 && lastIdx + 1 < PERIODS.length)
+      ? { day: last.day, period: PERIODS[lastIdx + 1].id }
+      : { day: DAYS[0], period: PERIODS[0].id };
+    if (!used.has(candidate.day + '_' + candidate.period)) next = candidate;
+  }
+
+  if (!next) {
+    outer:
+    for (const d of DAYS) {
+      for (const p of PERIODS) {
+        if (!used.has(d + '_' + p.id)) {
+          next = { day: d, period: p.id };
+          break outer;
+        }
       }
     }
   }
+
   currentForm.slots.push(next || { day: DAYS[0], period: PERIODS[0].id });
   renderSlotsUI();
 }
@@ -1244,6 +1442,7 @@ async function deleteCourse() {
 let sharePeer = null;
 let shareConn = null;
 let pendingImport = null;
+let pendingImportName = null;
 let shareCountdownInterval = null;
 let shareExpireAt = null;
 
@@ -1290,6 +1489,7 @@ function resetShareUI() {
   document.getElementById('importActions').style.display = 'none';
   setReceiveStatus('');
   pendingImport = null;
+  pendingImportName = null;
 }
 
 function openShareModal() {
@@ -1481,13 +1681,93 @@ async function saveGeneralMemoNow() {
   await persistAppData();
 }
 
-// --- screen lock: toggles between "講義を登録" (tap a cell to register) and
-// "画面ロック" (grid taps do nothing, to avoid accidental edits) ---
-function toggleScreenLock() {
-  screenLocked = !screenLocked;
-  document.getElementById('addBtn').textContent = screenLocked ? '画面ロック' : '講義を登録';
-  document.getElementById('grid').classList.toggle('locked', screenLocked);
-  document.getElementById('lockBanner').classList.toggle('show', screenLocked);
+// --- cell interaction mode: 講義確認(既定) / 講義登録 / 画面ロック / 講義削除 ---
+function setCellMode(mode) {
+  cellMode = mode;
+  if (mode !== 'delete') selectedForDelete.clear();
+  document.getElementById('grid').classList.toggle('locked', mode === 'lock');
+  document.getElementById('lockBanner').classList.toggle('show', mode === 'lock');
+  document.getElementById('deleteBanner').classList.toggle('show', mode === 'delete');
+  updateDeleteBannerCount();
+  const locked = mode === 'lock';
+  document.getElementById('patternMenuBtn').disabled = locked;
+  document.getElementById('calPrevBtn').disabled = locked;
+  document.getElementById('calNextBtn').disabled = locked;
+  if (locked) closePatternMenu();
+  renderGrid();
+}
+
+function handleCellClick(course, day, periodId) {
+  if (cellMode === 'lock') return;
+  if (cellMode === 'register') {
+    if (course) openEditForm(course); else openNewForm(day, periodId);
+    return;
+  }
+  if (cellMode === 'view') {
+    if (course) openCourseViewModal(course);
+    return;
+  }
+  if (cellMode === 'delete') {
+    if (course) toggleDeleteSelection(course.id);
+    return;
+  }
+}
+
+// --- 講義確認: read-only view of a course, with edit/delete shortcuts ---
+function openCourseViewModal(course) {
+  viewingCourse = course;
+  const period = PERIODS.find(p => p.id === course.period);
+  const periodLabel = period ? period.label : '';
+  const periodTime = period && period.time ? `(${period.time})` : '';
+  document.getElementById('viewCourseName').textContent = course.name;
+  document.getElementById('viewCourseRoom').textContent = course.room || '(未設定)';
+  document.getElementById('viewCourseTime').textContent = `${course.day}曜日 ${periodLabel}${periodTime}`;
+  document.getElementById('viewOverlay').classList.add('open');
+}
+
+function closeViewModal() {
+  document.getElementById('viewOverlay').classList.remove('open');
+  viewingCourse = null;
+}
+
+async function deleteFromViewModal() {
+  if (!viewingCourse) return;
+  if (!confirm(`「${viewingCourse.name}」を削除しますか?`)) return;
+  const next = courses.filter(c => c.id !== viewingCourse.id);
+  await saveCourses(next);
+  renderGrid();
+  closeViewModal();
+}
+
+function editFromViewModal() {
+  if (!viewingCourse) return;
+  const course = viewingCourse;
+  closeViewModal();
+  openEditForm(course);
+}
+
+// --- 講義削除(複数選択): tap courses to select, then confirm once to delete them all ---
+function toggleDeleteSelection(courseId) {
+  if (selectedForDelete.has(courseId)) selectedForDelete.delete(courseId);
+  else selectedForDelete.add(courseId);
+  renderGrid();
+  updateDeleteBannerCount();
+}
+
+function updateDeleteBannerCount() {
+  const n = selectedForDelete.size;
+  document.getElementById('deleteCount').textContent = String(n);
+  document.getElementById('deleteConfirmBtn').disabled = n === 0;
+}
+
+async function deleteSelectedCourses() {
+  if (selectedForDelete.size === 0) return;
+  if (!confirm(`選択した${selectedForDelete.size}件の講義を削除しますか?`)) return;
+  const next = courses.filter(c => !selectedForDelete.has(c.id));
+  selectedForDelete.clear();
+  await saveCourses(next);
+  renderGrid();
+  updateDeleteBannerCount();
 }
 
 function switchShareTab(tab) {
@@ -1548,7 +1828,7 @@ function tryCreateSharePeer(retriesLeft) {
   sharePeer.on('connection', (conn) => {
     shareConn = conn;
     conn.on('open', () => {
-      conn.send({ type: 'timetable', courses });
+      conn.send({ type: 'timetable', courses, patternName: getActivePattern().name });
       setSendStatus(`送信しました(${courses.length}件の講義)`, 'ok');
     });
     conn.on('error', () => {
@@ -1595,6 +1875,7 @@ function connectToShareCode() {
   document.getElementById('importSummary').style.display = 'none';
   document.getElementById('importActions').style.display = 'none';
   pendingImport = null;
+  pendingImportName = null;
   setReceiveStatus('接続しています…');
 
   sharePeer = new Peer();
@@ -1610,12 +1891,10 @@ function connectToShareCode() {
       if (data && data.type === 'timetable' && Array.isArray(data.courses)) {
         const valid = sanitizeIncomingCourses(data.courses);
         pendingImport = valid;
+        pendingImportName = typeof data.patternName === 'string' ? data.patternName.trim() : null;
         setReceiveStatus(`受信しました(${valid.length}件)`, 'ok');
-        const summary = document.getElementById('importSummary');
-        summary.textContent = valid.length
-          ? valid.map(c => `${c.day} ${PERIODS.find(p => p.id === c.period).label} ${c.name}`).join(' / ')
-          : '有効な講義データがありませんでした。';
-        summary.style.display = 'block';
+        renderImportPreview(valid);
+        document.getElementById('importSummary').style.display = 'block';
         document.getElementById('importActions').style.display = valid.length ? 'flex' : 'none';
       }
     });
@@ -1628,6 +1907,61 @@ function connectToShareCode() {
   sharePeer.on('error', () => {
     setReceiveStatus('接続できませんでした。コードを確認してください。', 'err');
   });
+}
+
+// renders the received courses as a compact visual grid (only the rows that
+// actually contain a course, to keep the preview short) instead of plain text
+function renderImportPreview(list) {
+  const container = document.getElementById('importSummary');
+  container.innerHTML = '';
+
+  if (!list.length) {
+    container.textContent = '有効な講義データがありませんでした。';
+    return;
+  }
+
+  const usedPeriodIds = new Set(list.map(c => c.period));
+  const rows = PERIODS.filter(p => usedPeriodIds.has(p.id));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'preview-grid-wrap';
+  const grid = document.createElement('div');
+  grid.className = 'preview-grid';
+  grid.style.gridTemplateColumns = `minmax(34px, 44px) repeat(${DAYS.length}, minmax(48px, 1fr))`;
+
+  const corner = document.createElement('div');
+  corner.className = 'preview-corner';
+  grid.appendChild(corner);
+
+  DAYS.forEach(d => {
+    const head = document.createElement('div');
+    head.className = 'preview-day-head';
+    head.textContent = d;
+    grid.appendChild(head);
+  });
+
+  rows.forEach(p => {
+    const label = document.createElement('div');
+    label.className = 'preview-period-label';
+    label.textContent = p.label;
+    grid.appendChild(label);
+
+    DAYS.forEach(d => {
+      const course = list.find(c => c.day === d && c.period === p.id);
+      const cell = document.createElement('div');
+      cell.className = 'preview-cell';
+      if (course) {
+        const palette = PALETTE[course.colorIdx] || PALETTE[0];
+        cell.style.background = palette.bg;
+        cell.style.color = palette.text;
+        cell.textContent = course.name;
+      }
+      grid.appendChild(cell);
+    });
+  });
+
+  wrap.appendChild(grid);
+  container.appendChild(wrap);
 }
 
 function sanitizeIncomingCourses(list) {
@@ -1661,6 +1995,12 @@ async function importMerge() {
 async function importReplace() {
   if (!pendingImport || !pendingImport.length) return;
   const replaced = pendingImport.map(c => ({ ...c, id: uid() }));
+  if (pendingImportName) {
+    const active = getActivePattern();
+    if (active) active.name = pendingImportName;
+    updatePatternMenuButton();
+    renderPatternMenu();
+  }
   await saveCourses(replaced);
   renderGrid();
   closeShareModal();
@@ -1668,13 +2008,19 @@ async function importReplace() {
 
 function importDiscard() {
   pendingImport = null;
+  pendingImportName = null;
   document.getElementById('importSummary').style.display = 'none';
   document.getElementById('importActions').style.display = 'none';
   setReceiveStatus('取り込みませんでした');
 }
 
 // --- init ---
-document.getElementById('addBtn').addEventListener('click', () => toggleScreenLock());
+document.getElementById('modeSelect').addEventListener('change', (e) => setCellMode(e.target.value));
+document.getElementById('viewCloseBtn').addEventListener('click', closeViewModal);
+document.getElementById('viewEditBtn').addEventListener('click', editFromViewModal);
+document.getElementById('viewDeleteBtn').addEventListener('click', deleteFromViewModal);
+document.getElementById('viewOverlay').addEventListener('click', closeViewModal);
+document.getElementById('deleteConfirmBtn').addEventListener('click', deleteSelectedCourses);
 document.getElementById('addSlotBtn').addEventListener('click', addSlot);
 document.getElementById('cancelBtn').addEventListener('click', closeForm);
 document.getElementById('saveBtn').addEventListener('click', submitForm);
