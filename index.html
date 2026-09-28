@@ -162,7 +162,21 @@
     margin-bottom: 10px;
   }
   .cal-header-right { display: flex; align-items: center; gap: 6px; }
-  .cal-today-btn { width: auto; padding: 0 10px; font-size: 12px; }
+  .cal-nav-btn.cal-today-btn { width: auto; padding: 0 18px; height: 40px; font-size: 15px; font-weight: 600; }
+  .notify-help { font-size: 12px; color: #8A8676; line-height: 1.6; margin: 4px 0 10px; }
+  .notify-offset-label { flex: 1; font-size: 14px; color: #2E2C27; }
+  .notify-add-row { display: flex; align-items: center; gap: 8px; }
+  .notify-add-row input { width: 110px; padding: 8px 10px; border-radius: 6px; border: 1px solid #cfc9b8; font-family: inherit; font-size: 14px; background: #fff; }
+  .notify-status { font-size: 12px; color: #B23A3A; min-height: 16px; margin: 6px 0 0; }
+  .memo-view-text {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #2E2C27;
+    white-space: pre-line;
+    word-break: break-word;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
   .calendar-title {
     font-size: 15px;
     font-weight: 700;
@@ -522,6 +536,8 @@
   }
   .modal-overlay.open { display: flex; }
   .modal {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     background: #FAF7EF;
     border-radius: 8px;
     padding: 24px;
@@ -961,6 +977,20 @@
     </div>
     <div class="settings-periods-list" id="periodsSettingsList"></div>
     <button type="button" class="btn-link" id="addPeriodBtn">＋ 限を追加</button>
+    <div class="field" style="margin:20px 0 6px;">
+      <span>予定の通知</span>
+    </div>
+    <label class="share-check-row">
+      <input type="checkbox" id="notifyEnabled" />
+      <span>予定の時間を通知する</span>
+    </label>
+    <p class="notify-help">カレンダーの予定に「10:30 買い物」のように書くと、その行が通知されます(時間の無い行は通知されません)。</p>
+    <div class="settings-periods-list" id="notifyOffsetsList"></div>
+    <div class="notify-add-row">
+      <input type="text" id="notifyOffsetInput" inputmode="numeric" placeholder="分(例: 30)" />
+      <button type="button" class="btn-link" id="addNotifyOffsetBtn">＋ 通知タイミングを追加</button>
+    </div>
+    <p class="notify-status" id="notifyStatus"></p>
     <div class="modal-actions" style="justify-content:flex-end; margin-top:16px;">
       <button class="btn btn-ghost" id="settingsCloseBtn">閉じる</button>
     </div>
@@ -978,6 +1008,16 @@
         <button class="btn btn-ghost" id="memoCancelBtn">キャンセル</button>
         <button class="btn btn-primary" id="memoSaveBtn">保存</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="memoViewOverlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="memoViewTitle">予定</h2>
+    <div class="memo-view-text" id="memoViewText"></div>
+    <div class="modal-actions" style="justify-content:flex-end; margin-top:16px;">
+      <button class="btn btn-ghost" id="memoViewCloseBtn">閉じる</button>
     </div>
   </div>
 </div>
@@ -1013,6 +1053,10 @@ const MEMO_PALETTE = [
   { name: "空", bg: "#AFD9F5" },
   { name: "緑", bg: "#BEE3A8" },
   { name: "橙", bg: "#F6C99A" },
+  { name: "紫", bg: "#D6C6F0" },
+  { name: "赤", bg: "#F3B49C" },
+  { name: "青", bg: "#A9BEF2" },
+  { name: "灰", bg: "#D9D6CC" },
 ];
 let selectedMemoColorIdx = 0;
 const STORAGE_KEY = "timetable:data";
@@ -1032,6 +1076,8 @@ let calendarYear = 0;
 let calendarMonth = 0;       // 0-indexed
 let selectedMemoDate = null;
 let generalMemo = "";
+let notifySettings = { enabled: false, offsets: [30] };
+let notificationTimers = [];
 let generalMemoSaveTimer = null;
 
 function uid() {
@@ -1102,6 +1148,7 @@ async function loadAppData() {
         if (!Array.isArray(data.periods) || !data.periods.length) data.periods = clonePeriods(DEFAULT_PERIODS);
         data.memos = normalizeMemos(data.memos);
         if (typeof data.generalMemo !== 'string') data.generalMemo = '';
+        data.notifySettings = normalizeNotifySettings(data.notifySettings);
         return data;
       }
     } catch (e) {
@@ -1123,11 +1170,12 @@ async function loadAppData() {
     periods: clonePeriods(DEFAULT_PERIODS),
     memos: {},
     generalMemo: '',
+    notifySettings: normalizeNotifySettings(null),
   };
 }
 
 async function persistAppData() {
-  const ok = await writeStorageRaw(STORAGE_KEY, JSON.stringify({ patterns, activeId: activePatternId, periods: PERIODS, memos, generalMemo }));
+  const ok = await writeStorageRaw(STORAGE_KEY, JSON.stringify({ patterns, activeId: activePatternId, periods: PERIODS, memos, generalMemo, notifySettings }));
   if (ok) hideSaveError(); else showSaveError();
 }
 
@@ -1786,7 +1834,7 @@ function renderCalendar() {
       cell.appendChild(preview);
     }
 
-    cell.addEventListener('click', () => { if (cellMode !== 'lock') openMemoModal(key); });
+    cell.addEventListener('click', () => handleDayClick(key));
     grid.appendChild(cell);
   }
 }
@@ -1803,6 +1851,44 @@ function goToCurrentMonth() {
   calendarYear = today.getFullYear();
   calendarMonth = today.getMonth();
   renderCalendar();
+}
+
+// 1 click => show that day's schedule (read-only)
+// 2 clicks on the same day => open the edit/delete modal
+// (a short wait after the first click tells the two apart without flicker)
+let dayClickTimer = null;
+let pendingClickKey = null;
+const DAY_DOUBLE_CLICK_MS = 280;
+
+function handleDayClick(key) {
+  if (cellMode === 'lock') return;
+  if (dayClickTimer && pendingClickKey === key) {
+    clearTimeout(dayClickTimer);
+    dayClickTimer = null;
+    pendingClickKey = null;
+    openMemoModal(key);
+    return;
+  }
+  if (dayClickTimer) clearTimeout(dayClickTimer);
+  pendingClickKey = key;
+  dayClickTimer = setTimeout(() => {
+    dayClickTimer = null;
+    pendingClickKey = null;
+    if (memos[key]) openMemoViewModal(key);
+  }, DAY_DOUBLE_CLICK_MS);
+}
+
+function openMemoViewModal(key) {
+  const memo = memos[key];
+  if (!memo) return;
+  const [y, m, d] = key.split('-').map(Number);
+  document.getElementById('memoViewTitle').textContent = `${y}年${m}月${d}日の予定`;
+  document.getElementById('memoViewText').textContent = memo.text;
+  document.getElementById('memoViewOverlay').classList.add('open');
+}
+
+function closeMemoViewModal() {
+  document.getElementById('memoViewOverlay').classList.remove('open');
 }
 
 function renderMemoColorRow() {
@@ -1846,13 +1932,185 @@ async function saveMemo() {
   renderCalendar();
   closeMemoModal();
   await persistAppData();
+  scheduleTodayNotifications();
 }
 
 async function deleteMemo() {
   if (!selectedMemoDate) return;
+  if (!confirm('この日の予定を削除しますか?')) return;
   delete memos[selectedMemoDate];
   renderCalendar();
   closeMemoModal();
+  await persistAppData();
+  scheduleTodayNotifications();
+}
+
+// --- 予定の通知(ブラウザ/PWAが起動している間に届くベストエフォート方式) ---
+function normalizeNotifySettings(raw) {
+  const out = { enabled: false, offsets: [30] };
+  if (raw && typeof raw === 'object') {
+    out.enabled = raw.enabled === true;
+    if (Array.isArray(raw.offsets)) {
+      const list = raw.offsets.filter(n => Number.isInteger(n) && n >= 0 && n <= 1440);
+      const uniq = Array.from(new Set(list)).sort((a, b) => b - a);
+      if (uniq.length) out.offsets = uniq;
+    }
+  }
+  return out;
+}
+
+// 全角の数字・コロン・空白を半角に揃える(全角/半角を区別しない)
+function normalizeZenkaku(str) {
+  return String(str)
+    .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/[：﹕꞉]/g, ':')
+    .replace(/[\u3000\s]+/g, ' ')
+    .trim();
+}
+
+// "10:30 買い物" のような行を取り出す。時間が無い行は通知対象外
+function parseTimedEntries(text) {
+  const entries = [];
+  String(text || '').split(/\r?\n/).forEach(rawLine => {
+    const line = normalizeZenkaku(rawLine);
+    const m = line.match(/^(\d{1,2}):(\d{2})(?!\d)\s*(.+)$/);
+    if (!m) return;
+    const hour = parseInt(m[1], 10);
+    const minute = parseInt(m[2], 10);
+    const label = m[3].trim();
+    if (hour > 23 || minute > 59 || !label) return;
+    entries.push({ hour, minute, label });
+  });
+  return entries;
+}
+
+function clearScheduledNotifications() {
+  notificationTimers.forEach(id => clearTimeout(id));
+  notificationTimers = [];
+}
+
+function showAppNotification(title, body) {
+  const fallback = () => { try { new Notification(title, { body }); } catch (e) {} };
+  if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+    navigator.serviceWorker.ready
+      .then(reg => reg && reg.showNotification ? reg.showNotification(title, { body, tag: title + body }) : fallback())
+      .catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
+// 今日の予定のうち、まだ先の時刻のものを setTimeout で予約する
+function scheduleTodayNotifications(now = new Date()) {
+  clearScheduledNotifications();
+  if (!notifySettings.enabled) return 0;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return 0;
+
+  const todayKey = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
+  const memo = memos[todayKey];
+  if (!memo) return 0;
+
+  let scheduled = 0;
+  parseTimedEntries(memo.text).forEach(entry => {
+    notifySettings.offsets.forEach(offsetMin => {
+      const fireAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), entry.hour, entry.minute, 0, 0);
+      fireAt.setMinutes(fireAt.getMinutes() - offsetMin);
+      const delay = fireAt.getTime() - now.getTime();
+      if (delay <= 0) return;
+      const hh = String(entry.hour).padStart(2, '0');
+      const mm = String(entry.minute).padStart(2, '0');
+      const title = offsetMin > 0 ? `${offsetMin}分後 ${hh}:${mm} の予定` : `${hh}:${mm} の予定`;
+      notificationTimers.push(setTimeout(() => showAppNotification(title, entry.label), delay));
+      scheduled++;
+    });
+  });
+  return scheduled;
+}
+
+function setNotifyStatus(msg) {
+  document.getElementById('notifyStatus').textContent = msg || '';
+}
+
+function renderNotifySettings() {
+  document.getElementById('notifyEnabled').checked = notifySettings.enabled;
+  const list = document.getElementById('notifyOffsetsList');
+  list.innerHTML = '';
+  notifySettings.offsets.forEach(min => {
+    const row = document.createElement('div');
+    row.className = 'settings-period-row';
+
+    const label = document.createElement('span');
+    label.className = 'notify-offset-label';
+    label.textContent = min === 0 ? '予定の時刻ちょうど' : (min % 60 === 0 ? `${min / 60}時間前` : `${min}分前`);
+    row.appendChild(label);
+
+    if (notifySettings.offsets.length > 1) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'pattern-icon-btn danger';
+      del.textContent = '🗑';
+      del.setAttribute('aria-label', `${label.textContent}の通知を削除`);
+      del.addEventListener('click', () => removeNotifyOffset(min));
+      row.appendChild(del);
+    }
+    list.appendChild(row);
+  });
+}
+
+async function setNotifyEnabled(enabled) {
+  if (enabled) {
+    if (typeof Notification === 'undefined') {
+      notifySettings.enabled = false;
+      setNotifyStatus('このブラウザは通知に対応していません。');
+    } else {
+      let perm = Notification.permission;
+      if (perm === 'default') perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        notifySettings.enabled = true;
+        setNotifyStatus('');
+      } else {
+        notifySettings.enabled = false;
+        setNotifyStatus('通知が許可されていません。ブラウザの設定で許可してください。');
+      }
+    }
+  } else {
+    notifySettings.enabled = false;
+    setNotifyStatus('');
+  }
+  renderNotifySettings();
+  scheduleTodayNotifications();
+  await persistAppData();
+}
+
+async function addNotifyOffset() {
+  const input = document.getElementById('notifyOffsetInput');
+  const raw = normalizeZenkaku(input.value);
+  const min = /^\d+$/.test(raw) ? parseInt(raw, 10) : NaN;
+  if (!Number.isInteger(min) || min < 0 || min > 1440) {
+    setNotifyStatus('0〜1440の数字(分)を入力してください。');
+    return;
+  }
+  if (notifySettings.offsets.includes(min)) {
+    setNotifyStatus('その通知タイミングはすでに登録されています。');
+    return;
+  }
+  if (notifySettings.offsets.length >= 10) {
+    setNotifyStatus('通知タイミングは10個まで登録できます。');
+    return;
+  }
+  notifySettings.offsets = normalizeNotifySettings({ enabled: notifySettings.enabled, offsets: [...notifySettings.offsets, min] }).offsets;
+  input.value = '';
+  setNotifyStatus('');
+  renderNotifySettings();
+  scheduleTodayNotifications();
+  await persistAppData();
+}
+
+async function removeNotifyOffset(min) {
+  if (notifySettings.offsets.length <= 1) return;
+  notifySettings.offsets = notifySettings.offsets.filter(n => n !== min);
+  renderNotifySettings();
+  scheduleTodayNotifications();
   await persistAppData();
 }
 
@@ -2282,6 +2540,9 @@ async function importReceived() {
   if (recvGeneralMemo) {
     generalMemo = generalMemo ? (generalMemo + '\n\n' + recvGeneralMemo) : recvGeneralMemo;
     document.getElementById('generalMemoTextarea').value = generalMemo;
+  renderNotifySettings();
+  scheduleTodayNotifications();
+  setInterval(() => scheduleTodayNotifications(), 5 * 60 * 1000);
   }
 
   updatePatternMenuButton();
@@ -2326,6 +2587,11 @@ document.getElementById('memoSaveBtn').addEventListener('click', saveMemo);
 document.getElementById('memoDeleteBtn').addEventListener('click', deleteMemo);
 document.getElementById('memoOverlay').addEventListener('click', closeMemoModal);
 document.getElementById('generalMemoTextarea').addEventListener('input', scheduleGeneralMemoSave);
+document.getElementById('memoViewCloseBtn').addEventListener('click', closeMemoViewModal);
+document.getElementById('memoViewOverlay').addEventListener('click', closeMemoViewModal);
+document.getElementById('notifyEnabled').addEventListener('change', (e) => setNotifyEnabled(e.target.checked));
+document.getElementById('addNotifyOffsetBtn').addEventListener('click', addNotifyOffset);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleTodayNotifications(); });
 document.getElementById('generalMemoTextarea').addEventListener('blur', saveGeneralMemoNow);
 document.getElementById('tabSend').addEventListener('click', () => switchShareTab('send'));
 document.getElementById('tabReceive').addEventListener('click', () => switchShareTab('receive'));
@@ -2356,6 +2622,7 @@ document.addEventListener('click', (e) => {
   PERIODS = data.periods;
   memos = data.memos;
   generalMemo = data.generalMemo;
+  notifySettings = data.notifySettings;
   courses = getActivePattern().courses;
   const today = new Date();
   calendarYear = today.getFullYear();

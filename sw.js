@@ -1,4 +1,4 @@
-const CACHE_NAME = "timetable-app-v12";
+const CACHE_NAME = "timetable-app-v13";
 const APP_SHELL = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -41,5 +41,16 @@ self.addEventListener("fetch", (event) => {
         return res;
       })
       .catch(() => caches.match(req))
+  );
+});
+
+// 通知をタップしたらアプリを開く(すでに開いていればそれを前面に出す)
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      if (list.length) return list[0].focus();
+      return self.clients.openWindow("./index.html");
+    })
   );
 });
