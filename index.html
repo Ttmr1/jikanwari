@@ -552,6 +552,7 @@
     color: #24344D;
   }
   .row2 { display: flex; gap: 8px; margin-bottom: 12px; }
+  .sync-note { font-size: 12px; color: #6B5A1E; background: #F3E48F; border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; line-height: 1.5; }
   .slots-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .slots-head span { font-size: 12px; color: #5C594E; }
   .slots-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
@@ -879,6 +880,7 @@
       <input type="text" id="fName" placeholder="線形空間論" />
       <div class="form-error" id="fNameError" style="display:none;"></div>
     </label>
+    <div class="sync-note" id="fSyncNote" style="display:none;"></div>
     <label class="field">教室 / 場所
       <input type="text" id="fRoom" placeholder="37-705 / オンデマンド" />
     </label>
@@ -1465,7 +1467,7 @@ function renderSlotsUI() {
     });
     row.appendChild(periodSel);
 
-    if (isNew && currentForm.slots.length > 1) {
+    if (currentForm.slots.length > 1 && (isNew || idx > 0)) {
       const rmBtn = document.createElement('button');
       rmBtn.type = 'button';
       rmBtn.className = 'removeSlotBtn';
@@ -1481,7 +1483,7 @@ function renderSlotsUI() {
     list.appendChild(row);
   });
 
-  document.getElementById('addSlotBtn').style.display = isNew ? 'inline-block' : 'none';
+  document.getElementById('addSlotBtn').style.display = 'inline-block';
 }
 
 function addSlot() {
@@ -1551,6 +1553,7 @@ function openEditForm(course) {
     name: course.name,
     room: course.room,
     colorIdx: course.colorIdx,
+    originalName: course.name,
     slots: [{ day: course.day, period: course.period }],
   };
   fillFormUI();
@@ -1559,10 +1562,45 @@ function openEditForm(course) {
   document.getElementById('overlay').classList.add('open');
 }
 
+// 指定した講義名と同名のコマ数(編集中のコマ自身は除く。同じ時間割内も含む)
+function countSameName(name, excludeId) {
+  let n = 0;
+  patterns.forEach(p => {
+    p.courses.forEach(c => { if (c.name === name && c.id !== excludeId) n++; });
+  });
+  return n;
+}
+
+// 他の時間割にある、指定した講義名群と同名のコマ数
+function countInOtherPatterns(names) {
+  let n = 0;
+  patterns.forEach(p => {
+    if (p.id === activePatternId) return;
+    p.courses.forEach(c => { if (names.has(c.name)) n++; });
+  });
+  return n;
+}
+
+// 他の時間割から、指定した講義名群と同名のコマをすべて削除
+function removeFromOtherPatterns(names) {
+  patterns.forEach(p => {
+    if (p.id === activePatternId) return;
+    p.courses = p.courses.filter(c => !names.has(c.name));
+  });
+}
+
 function fillFormUI() {
   document.getElementById('fName').value = currentForm.name;
   document.getElementById('fRoom').value = currentForm.room;
   document.getElementById('fNameError').style.display = 'none';
+  const syncNote = document.getElementById('fSyncNote');
+  const syncCount = currentForm.originalName ? countSameName(currentForm.originalName, currentForm.id) : 0;
+  if (syncCount > 0) {
+    syncNote.textContent = `同名の講義(${syncCount}件。他の時間割・連続コマを含む)にも、名前・教室・色の変更が反映されます`;
+    syncNote.style.display = 'block';
+  } else {
+    syncNote.style.display = 'none';
+  }
   renderSlotsUI();
   renderColorRow();
 }
@@ -1595,6 +1633,13 @@ async function submitForm() {
     working = working.filter(c => !(c.day === s.day && c.period === s.period));
   });
 
+  // 編集時: 同じ時間割内の同名コマ(2コマ連続など)も名前・教室・色を揃える
+  if (currentForm.id && currentForm.originalName) {
+    const from = currentForm.originalName;
+    const { name, room, colorIdx } = currentForm;
+    working = working.map(c => c.name === from ? { ...c, name, room, colorIdx } : c);
+  }
+
   const newCourses = slots.map((s, idx) => ({
     id: (currentForm.id && idx === 0) ? currentForm.id : uid(),
     day: s.day,
@@ -1604,6 +1649,17 @@ async function submitForm() {
     colorIdx: currentForm.colorIdx,
   }));
 
+  // 編集時: 他の時間割にある同名の講義にも名前・教室・色を反映
+  // (曜日・時限は時間割ごとに違うので変更しない)
+  if (currentForm.id && currentForm.originalName) {
+    const from = currentForm.originalName;
+    const { name, room, colorIdx } = currentForm;
+    patterns.forEach(p => {
+      if (p.id === activePatternId) return;
+      p.courses = p.courses.map(c => c.name === from ? { ...c, name, room, colorIdx } : c);
+    });
+  }
+
   const next = [...working, ...newCourses];
   await saveCourses(next);
   renderGrid();
@@ -1612,6 +1668,10 @@ async function submitForm() {
 
 async function deleteCourse() {
   if (!currentForm || !currentForm.id) return;
+  const names = new Set([currentForm.originalName || currentForm.name]);
+  const other = countInOtherPatterns(names);
+  if (other > 0 && !confirm(`他の時間割にある同名の講義(${other}件)も削除されます。削除しますか?`)) return;
+  removeFromOtherPatterns(names);
   const next = courses.filter(c => c.id !== currentForm.id);
   await saveCourses(next);
   renderGrid();
@@ -2180,7 +2240,11 @@ function closeViewModal() {
 
 async function deleteFromViewModal() {
   if (!viewingCourse) return;
-  if (!confirm(`「${viewingCourse.name}」を削除しますか?`)) return;
+  const names = new Set([viewingCourse.name]);
+  const other = countInOtherPatterns(names);
+  const extra = other > 0 ? `\n他の時間割にある同名の講義(${other}件)も削除されます。` : '';
+  if (!confirm(`「${viewingCourse.name}」を削除しますか?${extra}`)) return;
+  removeFromOtherPatterns(names);
   const next = courses.filter(c => c.id !== viewingCourse.id);
   await saveCourses(next);
   renderGrid();
@@ -2210,7 +2274,11 @@ function updateDeleteBannerCount() {
 
 async function deleteSelectedCourses() {
   if (selectedForDelete.size === 0) return;
-  if (!confirm(`選択した${selectedForDelete.size}件の講義を削除しますか?`)) return;
+  const names = new Set(courses.filter(c => selectedForDelete.has(c.id)).map(c => c.name));
+  const other = countInOtherPatterns(names);
+  const extra = other > 0 ? `\n他の時間割にある同名の講義(${other}件)も削除されます。` : '';
+  if (!confirm(`選択した${selectedForDelete.size}件の講義を削除しますか?${extra}`)) return;
+  removeFromOtherPatterns(names);
   const next = courses.filter(c => !selectedForDelete.has(c.id));
   selectedForDelete.clear();
   await saveCourses(next);
